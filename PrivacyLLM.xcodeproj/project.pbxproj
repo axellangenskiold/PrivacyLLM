@@ -23,6 +23,10 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXBuildFile section */
+		1AB686000000000000000003 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000002 /* GRDB */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivacyLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1AB6856D2FD9FB05000548D4 /* PrivacyLLMTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrivacyLLMTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1AB686000000000000000003 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = PrivacyLLM;
 			packageProductDependencies = (
+				1AB686000000000000000002 /* GRDB */,
 			);
 			productName = PrivacyLLM;
 			productReference = 1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 1AB685552FD9FB02000548D4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1AB6855F2FD9FB03000548D4 /* Products */;
 			projectDirPath = "";
@@ -547,6 +556,25 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1AB686000000000000000002 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		1AB685592FD9FB02000548D4 /* Build configuration list for PBXProject "PrivacyLLM" */ = {
