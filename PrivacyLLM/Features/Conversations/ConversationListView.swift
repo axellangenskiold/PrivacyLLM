@@ -4,6 +4,7 @@ nonisolated enum AppRoute: Hashable {
     case chat(Conversation)
     case models
     case documents
+    case settings
 }
 
 struct ConversationListView: View {
@@ -24,18 +25,26 @@ struct ConversationListView: View {
                 .navigationTitle("Local LLM")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            path.append(.models)
+                        Menu {
+                            Button {
+                                path.append(.models)
+                            } label: {
+                                Label("Models", systemImage: "cpu")
+                            }
+                            Button {
+                                path.append(.documents)
+                            } label: {
+                                Label("Documents", systemImage: "doc.text")
+                            }
+                            Button {
+                                path.append(.settings)
+                            } label: {
+                                Label("Settings", systemImage: "gearshape")
+                            }
                         } label: {
-                            Label("Models", systemImage: "cpu")
+                            Label("Menu", systemImage: "line.3.horizontal")
                         }
-                    }
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            path.append(.documents)
-                        } label: {
-                            Label("Documents", systemImage: "doc.text")
-                        }
+                        .accessibilityLabel("App menu")
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -53,6 +62,8 @@ struct ConversationListView: View {
                         ModelManagerView(environment: environment)
                     case .documents:
                         DocumentsView(environment: environment)
+                    case .settings:
+                        SettingsView(environment: environment)
                     }
                 }
                 .task { await viewModel.refresh() }

@@ -32,6 +32,10 @@ struct AppRootView: View {
                     )) ?? false
                     needsOnboarding = !completed
                 }
+                environment.appearance = (try? await environment.settingsStore.value(
+                    for: .appearance,
+                    default: AppearanceSetting.system
+                )) ?? .system
             }
             if systemEvents == nil {
                 let coordinator = SystemEventCoordinator(inference: environment.inference)

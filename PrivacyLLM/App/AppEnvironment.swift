@@ -13,6 +13,8 @@ final class AppEnvironment {
     let documents: any DocumentServicing
     let voice: any VoiceServicing
     let egressMonitor: EgressMonitor
+    /// Mirrors the persisted appearance setting so theme changes apply live (FR-39).
+    var appearance = AppearanceSetting.system
 
     init(
         database: AppDatabase,

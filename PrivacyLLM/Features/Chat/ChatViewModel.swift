@@ -252,11 +252,13 @@ final class ChatViewModel {
             messages.append(message)
             clearStreamingState()
             phase = .idle
+            Haptics.success()
         case .turnFailed(let reason, let partial):
             if let partial { messages.append(partial) }
             clearStreamingState()
             errorMessage = reason
             phase = .idle
+            Haptics.error()
         }
     }
 

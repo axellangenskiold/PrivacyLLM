@@ -8,6 +8,7 @@ struct PrivacyLLMApp: App {
         WindowGroup {
             AppRootView()
                 .environment(appEnvironment)
+                .preferredColorScheme(appEnvironment.appearance.colorScheme)
         }
     }
 }
