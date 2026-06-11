@@ -1,21 +1,12 @@
 import SwiftUI
 
-/// Temporary shell. The chat experience replaces this in the Chat MVP module;
-/// onboarding routing arrives with the onboarding module.
+/// App shell. Onboarding routing (no model → onboarding) lands in the
+/// onboarding module; until then the conversation list is the root.
 struct AppRootView: View {
+    @Environment(AppEnvironment.self) private var environment
+
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
-            Text("Local LLM")
-                .font(.largeTitle.bold())
-            Text("A private assistant that never leaves your device.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
+        ConversationListView(environment: environment)
     }
 }
 
