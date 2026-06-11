@@ -23,11 +23,15 @@ struct AppRootView: View {
         }
         .task {
             if needsOnboarding == nil {
-                let completed = (try? await environment.settingsStore.value(
-                    for: .hasCompletedOnboarding,
-                    default: false
-                )) ?? false
-                needsOnboarding = !completed
+                if ProcessInfo.processInfo.arguments.contains("--skip-onboarding") {
+                    needsOnboarding = false
+                } else {
+                    let completed = (try? await environment.settingsStore.value(
+                        for: .hasCompletedOnboarding,
+                        default: false
+                    )) ?? false
+                    needsOnboarding = !completed
+                }
             }
             if systemEvents == nil {
                 let coordinator = SystemEventCoordinator(inference: environment.inference)

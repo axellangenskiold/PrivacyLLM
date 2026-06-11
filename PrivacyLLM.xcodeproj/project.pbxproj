@@ -30,6 +30,8 @@
 		1AB686000000000000000017 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000016 /* MLXHuggingFace */; };
 		1AB686000000000000000023 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000022 /* HuggingFace */; };
 		1AB686000000000000000025 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000024 /* Tokenizers */; };
+		1AB686000000000000000033 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000032 /* MarkdownUI */; };
+		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +69,8 @@
 				1AB686000000000000000017 /* MLXHuggingFace in Frameworks */,
 				1AB686000000000000000023 /* HuggingFace in Frameworks */,
 				1AB686000000000000000025 /* Tokenizers in Frameworks */,
+				1AB686000000000000000033 /* MarkdownUI in Frameworks */,
+				1AB686000000000000000035 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +137,8 @@
 				1AB686000000000000000016 /* MLXHuggingFace */,
 				1AB686000000000000000022 /* HuggingFace */,
 				1AB686000000000000000024 /* Tokenizers */,
+				1AB686000000000000000032 /* MarkdownUI */,
+				1AB686000000000000000034 /* Highlightr */,
 			);
 			productName = PrivacyLLM;
 			productReference = 1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */;
@@ -221,6 +227,8 @@
 				1AB686000000000000000011 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				1AB686000000000000000021 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 				1AB686000000000000000026 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				1AB686000000000000000031 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1AB6855F2FD9FB03000548D4 /* Products */;
@@ -608,6 +616,22 @@
 				minimumVersion = 1.3.3;
 			};
 		};
+		1AB686000000000000000031 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
+		1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -640,6 +664,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1AB686000000000000000026 /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Tokenizers;
+		};
+		1AB686000000000000000032 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1AB686000000000000000031 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+		1AB686000000000000000034 /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
 		};
 /* End XCSwiftPackageProductDependency section */
 

@@ -4,6 +4,10 @@ import SwiftUI
 struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var thermalState = ProcessInfo.processInfo.thermalState
+    @State private var editTarget: Message?
+    @State private var editText = ""
+    @State private var showSystemPrompt = false
+    @State private var systemPromptText = ""
     @FocusState private var inputFocused: Bool
 
     init(conversation: Conversation, environment: AppEnvironment) {
@@ -30,6 +34,36 @@ struct ChatView: View {
                 .frame(maxWidth: 200)
                 .accessibilityLabel("Model mode")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        systemPromptText = viewModel.conversation.systemPrompt ?? ""
+                        showSystemPrompt = true
+                    } label: {
+                        Label("System Prompt", systemImage: "person.text.rectangle")
+                    }
+                    ShareLink(
+                        item: viewModel.exportMarkdown(),
+                        preview: SharePreview(viewModel.conversation.title)
+                    ) {
+                        Label("Share as Markdown", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        UIPasteboard.general.string = viewModel.exportPlainText()
+                    } label: {
+                        Label("Copy as Text", systemImage: "doc.on.doc")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("Conversation options")
+            }
+        }
+        .sheet(item: $editTarget) { message in
+            editSheet(for: message)
+        }
+        .sheet(isPresented: $showSystemPrompt) {
+            systemPromptSheet
         }
         .task { await viewModel.loadMessages() }
         .onReceive(
@@ -56,6 +90,64 @@ struct ChatView: View {
             .background(.orange.opacity(0.15))
     }
 
+    private func editSheet(for message: Message) -> some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Everything after this message will be replaced by a new reply.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                TextEditor(text: $editText)
+                    .padding(8)
+                    .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .padding()
+            .navigationTitle("Edit Message")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { editTarget = nil }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Re-run") {
+                        viewModel.editAndRerun(message, newText: editText)
+                        editTarget = nil
+                    }
+                    .disabled(editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var systemPromptSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $systemPromptText)
+                        .frame(minHeight: 140)
+                } header: {
+                    Text("Persona for this conversation")
+                } footer: {
+                    Text("Tells the model how to behave in this chat. Leave empty to use the global default from Settings.")
+                }
+            }
+            .navigationTitle("System Prompt")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showSystemPrompt = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        viewModel.updateSystemPrompt(systemPromptText)
+                        showSystemPrompt = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -65,7 +157,15 @@ struct ChatView: View {
                             .padding(.top, 48)
                     }
                     ForEach(viewModel.messages) { message in
-                        MessageBubble(message: message)
+                        MessageBubble(
+                            message: message,
+                            isLastAssistant: message.role == .assistant && message.id == viewModel.messages.last?.id,
+                            onRegenerate: { viewModel.regenerate() },
+                            onEdit: message.role == .user ? {
+                                editText = message.content
+                                editTarget = message
+                            } : nil
+                        )
                     }
                     streamingRow
                     if let error = viewModel.errorMessage {

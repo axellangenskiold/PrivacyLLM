@@ -56,13 +56,46 @@ final class ChatViewModel {
         guard canSend else { return }
         let text = draft
         draft = ""
+        runTurn { [orchestrator, conversation, messages] in
+            await orchestrator.send(text: text, conversation: conversation, history: messages)
+        }
+    }
+
+    /// Replaces the last assistant reply with a fresh generation (FR-3).
+    func regenerate() {
+        guard phase == .idle, let last = messages.last, last.role == .assistant else { return }
+        messages.removeLast()
+        let store = environment.messageStore
+        runTurn { [orchestrator, conversation, messages] in
+            try? await store.delete([last.id])
+            return await orchestrator.regenerate(conversation: conversation, history: messages)
+        }
+    }
+
+    /// Rewrites a user message and re-runs the conversation from that point,
+    /// discarding everything after it (FR-4).
+    func editAndRerun(_ message: Message, newText: String) {
+        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard phase == .idle, message.role == .user, !trimmed.isEmpty else { return }
+        if let index = messages.firstIndex(where: { $0.id == message.id }) {
+            messages = Array(messages[..<index])
+        }
+        let store = environment.messageStore
+        runTurn { [orchestrator, conversation, messages] in
+            try? await store.deleteFrom(message)
+            return await orchestrator.send(text: trimmed, conversation: conversation, history: messages)
+        }
+    }
+
+    private func runTurn(_ makeStream: @escaping () async -> AsyncStream<ChatTurnEvent>) {
         errorMessage = nil
         phase = .generating
         Task {
-            let stream = await orchestrator.send(text: text, conversation: conversation, history: messages)
+            let stream = await makeStream()
             for await event in stream {
                 handle(event)
             }
+            flushStreamBuffers()
             if phase != .idle { phase = .idle }
         }
     }
@@ -75,6 +108,24 @@ final class ChatViewModel {
         errorMessage = nil
     }
 
+    func exportMarkdown() -> String {
+        ConversationExporter.markdown(conversation: conversation, messages: messages)
+    }
+
+    func exportPlainText() -> String {
+        ConversationExporter.plainText(conversation: conversation, messages: messages)
+    }
+
+    /// Per-conversation persona override (FR-8); empty reverts to the global default.
+    func updateSystemPrompt(_ prompt: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        conversation.systemPrompt = trimmed.isEmpty ? nil : trimmed
+        conversation.updatedAt = .now
+        let updated = conversation
+        let store = environment.conversationStore
+        Task { try? await store.update(updated) }
+    }
+
     private func handle(_ event: ChatTurnEvent) {
         switch event {
         case .userMessageSaved(let message):
@@ -84,22 +135,58 @@ final class ChatViewModel {
             phase = .loadingModel(progress)
         case .assistantDelta(let piece):
             if phase != .generating { phase = .generating }
-            streamingText += piece
+            pendingText += piece
+            scheduleStreamFlush()
         case .assistantReasoningDelta(let piece):
             if phase != .generating { phase = .generating }
-            streamingReasoning += piece
+            pendingReasoning += piece
+            scheduleStreamFlush()
         case .assistantCompleted(let message):
             messages.append(message)
-            streamingText = ""
-            streamingReasoning = ""
+            clearStreamingState()
             phase = .idle
         case .turnFailed(let reason, let partial):
             if let partial { messages.append(partial) }
-            streamingText = ""
-            streamingReasoning = ""
+            clearStreamingState()
             errorMessage = reason
             phase = .idle
         }
+    }
+
+    // MARK: Streaming throttle
+
+    // Re-rendering markdown on every token is wasteful (NFR-3); deltas are
+    // batched and flushed to the UI a few times per frame-budget instead.
+    private var pendingText = ""
+    private var pendingReasoning = ""
+    private var flushScheduled = false
+
+    private func scheduleStreamFlush() {
+        guard !flushScheduled else { return }
+        flushScheduled = true
+        Task {
+            try? await Task.sleep(for: .milliseconds(80))
+            flushScheduled = false
+            flushStreamBuffers()
+        }
+    }
+
+    private func flushStreamBuffers() {
+        if !pendingText.isEmpty {
+            streamingText += pendingText
+            pendingText = ""
+        }
+        if !pendingReasoning.isEmpty {
+            streamingReasoning += pendingReasoning
+            pendingReasoning = ""
+        }
+    }
+
+    private func clearStreamingState() {
+        pendingText = ""
+        pendingReasoning = ""
+        streamingText = ""
+        streamingReasoning = ""
     }
 
     /// First user message names the conversation (FR-6 quality-of-life).

@@ -39,9 +39,19 @@ actor ChatOrchestrator {
     }
 
     func send(text: String, conversation: Conversation, history: [Message]) -> AsyncStream<ChatTurnEvent> {
+        run(newUserText: text, conversation: conversation, history: history)
+    }
+
+    /// Re-runs generation for a history that already ends with the user
+    /// message — regenerate (FR-3) and edit-and-rerun (FR-4).
+    func regenerate(conversation: Conversation, history: [Message]) -> AsyncStream<ChatTurnEvent> {
+        run(newUserText: nil, conversation: conversation, history: history)
+    }
+
+    private func run(newUserText: String?, conversation: Conversation, history: [Message]) -> AsyncStream<ChatTurnEvent> {
         let (stream, continuation) = AsyncStream<ChatTurnEvent>.makeStream()
         let task = Task {
-            await runTurn(text: text, conversation: conversation, history: history, continuation: continuation)
+            await runTurn(newUserText: newUserText, conversation: conversation, history: history, continuation: continuation)
             continuation.finish()
         }
         turnTask = task
@@ -54,22 +64,31 @@ actor ChatOrchestrator {
     }
 
     private func runTurn(
-        text: String,
+        newUserText: String?,
         conversation: Conversation,
         history: [Message],
         continuation: AsyncStream<ChatTurnEvent>.Continuation
     ) async {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        var fullHistory = history
+        if let newUserText {
+            let trimmed = newUserText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
 
-        let userMessage = Message(conversationID: conversation.id, role: .user, content: trimmed)
-        do {
-            try await messageStore.append(userMessage)
-        } catch {
-            continuation.yield(.turnFailed(reason: String(localized: "Couldn't save your message."), partial: nil))
-            return
+            let userMessage = Message(conversationID: conversation.id, role: .user, content: trimmed)
+            do {
+                try await messageStore.append(userMessage)
+            } catch {
+                continuation.yield(.turnFailed(reason: String(localized: "Couldn't save your message."), partial: nil))
+                return
+            }
+            continuation.yield(.userMessageSaved(userMessage))
+            fullHistory.append(userMessage)
+        } else {
+            guard fullHistory.last?.role == .user else {
+                continuation.yield(.turnFailed(reason: String(localized: "Nothing to regenerate."), partial: nil))
+                return
+            }
         }
-        continuation.yield(.userMessageSaved(userMessage))
 
         guard let (spec, directory) = await resolveActiveModel() else {
             continuation.yield(.turnFailed(
@@ -100,7 +119,7 @@ actor ChatOrchestrator {
         let inference = inference
         let input = await promptBuilder.build(
             systemPrompt: systemPrompt,
-            history: history + [userMessage],
+            history: fullHistory,
             config: config,
             countTokens: { await inference.countTokens($0) }
         )

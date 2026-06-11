@@ -1,7 +1,12 @@
+import MarkdownUI
 import SwiftUI
 
 struct MessageBubble: View {
     let message: Message
+    var isLastAssistant = false
+    var onRegenerate: (() -> Void)?
+    var onEdit: (() -> Void)?
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(alignment: .bottom) {
@@ -10,7 +15,14 @@ struct MessageBubble: View {
                 if message.role == .assistant, let reasoning = message.reasoning, !reasoning.isEmpty {
                     ReasoningDisclosure(text: reasoning, initiallyExpanded: false)
                 }
-                Text(message.content)
+                if message.role == .assistant {
+                    // Assistant replies render markdown + highlighted code (FR-5).
+                    Markdown(message.content)
+                        .markdownTheme(.chat)
+                        .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
+                } else {
+                    Text(message.content)
+                }
             }
             .chatBubbleStyle(isUser: message.role == .user)
             .contextMenu {
@@ -18,6 +30,16 @@ struct MessageBubble: View {
                     UIPasteboard.general.string = message.content
                 } label: {
                     Label("Copy", systemImage: "doc.on.doc")
+                }
+                if message.role == .user, let onEdit {
+                    Button(action: onEdit) {
+                        Label("Edit & Re-run", systemImage: "pencil")
+                    }
+                }
+                if isLastAssistant, let onRegenerate {
+                    Button(action: onRegenerate) {
+                        Label("Regenerate", systemImage: "arrow.clockwise")
+                    }
                 }
             }
             if message.role == .assistant { Spacer(minLength: 48) }
@@ -32,6 +54,7 @@ struct MessageBubble: View {
 struct StreamingBubble: View {
     let text: String
     var reasoning: String = ""
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(alignment: .bottom) {
@@ -42,7 +65,9 @@ struct StreamingBubble: View {
                     ReasoningDisclosure(text: reasoning, initiallyExpanded: true)
                 }
                 if !text.isEmpty {
-                    Text(text)
+                    Markdown(text)
+                        .markdownTheme(.chat)
+                        .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
                 }
             }
             .chatBubbleStyle(isUser: false)

@@ -1,41 +1,37 @@
-//
-//  PrivacyLLMUITests.swift
-//  PrivacyLLMUITests
-//
-//  Created by Axel Langenskiöld on 2026-06-10.
-//
-
 import XCTest
 
-final class PrivacyLLMUITests: XCTestCase {
-
+final class ChatFlowUITests: XCTestCase {
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testSendMessageStreamsMarkdownReply() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["--mock-services", "--skip-onboarding"]
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        app.buttons["New Chat"].firstMatch.tap()
+
+        let input = app.textFields["Message input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap()
+        input.typeText("Hello from the UI test")
+        app.buttons["Send message"].tap()
+
+        // The mock model's canned reply renders this markdown heading (FR-1/FR-5).
+        let heading = app.staticTexts["What works here"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 15))
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+    func testOnboardingAppearsOnFirstLaunch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--mock-services"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Private by design"].waitForExistence(timeout: 5))
+        app.buttons["Continue"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Pick your model"].waitForExistence(timeout: 5))
     }
 }
