@@ -49,10 +49,14 @@ final class AppEnvironment {
             // Last resort: keep the app usable this session without persistence.
             database = (try? AppDatabase.inMemory()) ?? { fatalError("Cannot open any database: \(error)") }()
         }
+        let modelManager = RealModelManager(
+            settingsStore: SettingsStore(database: database),
+            egressEventStore: EgressEventStore(database: database)
+        )
         return AppEnvironment(
             database: database,
             inference: MockInferenceService(),
-            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            modelManager: modelManager,
             search: MockSearchService(),
             documents: MockDocumentService(),
             voice: MockVoiceService()

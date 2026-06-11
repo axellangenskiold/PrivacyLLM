@@ -1,9 +1,14 @@
 import SwiftUI
 
+nonisolated enum AppRoute: Hashable {
+    case chat(Conversation)
+    case models
+}
+
 struct ConversationListView: View {
     private let environment: AppEnvironment
     @State private var viewModel: ConversationListViewModel
-    @State private var path: [Conversation] = []
+    @State private var path: [AppRoute] = []
     @State private var renameTarget: Conversation?
     @State private var renameText = ""
 
@@ -17,6 +22,13 @@ struct ConversationListView: View {
             content
                 .navigationTitle("Local LLM")
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            path.append(.models)
+                        } label: {
+                            Label("Models", systemImage: "cpu")
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             createAndOpen()
@@ -25,8 +37,13 @@ struct ConversationListView: View {
                         }
                     }
                 }
-                .navigationDestination(for: Conversation.self) { conversation in
-                    ChatView(conversation: conversation, environment: environment)
+                .navigationDestination(for: AppRoute.self) { route in
+                    switch route {
+                    case .chat(let conversation):
+                        ChatView(conversation: conversation, environment: environment)
+                    case .models:
+                        ModelManagerView(environment: environment)
+                    }
                 }
                 .task { await viewModel.refresh() }
                 .onChange(of: path) { _, newPath in
@@ -57,7 +74,7 @@ struct ConversationListView: View {
         } else {
             List {
                 ForEach(viewModel.conversations) { conversation in
-                    NavigationLink(value: conversation) {
+                    NavigationLink(value: AppRoute.chat(conversation)) {
                         row(for: conversation)
                     }
                     .swipeActions {
@@ -112,7 +129,7 @@ struct ConversationListView: View {
     private func createAndOpen() {
         Task {
             if let conversation = await viewModel.create() {
-                path.append(conversation)
+                path.append(.chat(conversation))
             }
         }
     }
