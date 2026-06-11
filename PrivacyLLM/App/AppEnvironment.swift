@@ -36,10 +36,16 @@ final class AppEnvironment {
     var egressEventStore: EgressEventStore { EgressEventStore(database: database) }
 
     /// Wires the services for a normal app launch. UI tests pass "--mock-services"
-    /// to force the all-mock environment regardless of platform.
+    /// to force the all-mock environment, plus "--skip-onboarding" to land
+    /// directly in the chat list.
     static func bootstrap() -> AppEnvironment {
         if ProcessInfo.processInfo.arguments.contains("--mock-services") {
-            return .mock()
+            let environment = AppEnvironment.mock()
+            if ProcessInfo.processInfo.arguments.contains("--skip-onboarding") {
+                let settings = environment.settingsStore
+                Task { try? await settings.set(true, for: .hasCompletedOnboarding) }
+            }
+            return environment
         }
         // Persistence is real everywhere; capability services arrive module by module.
         let database: AppDatabase
