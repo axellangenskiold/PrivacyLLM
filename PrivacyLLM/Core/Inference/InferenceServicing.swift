@@ -37,4 +37,11 @@ nonisolated protocol InferenceServicing: Sendable {
 
     /// Approximate bytes of memory held by the loaded model (FR-17).
     func memoryFootprintBytes() async -> Int64?
+
+    /// Exact token count using the loaded model's tokenizer; nil when no
+    /// tokenizer is available (callers fall back to estimation, MR-7).
+    func countTokens(_ text: String) async -> Int?
+
+    /// Drops caches without unloading the model — memory-warning response (NFR-8).
+    func reduceMemoryFootprint() async
 }

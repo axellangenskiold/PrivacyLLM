@@ -6,15 +6,20 @@ struct MessageBubble: View {
     var body: some View {
         HStack(alignment: .bottom) {
             if message.role == .user { Spacer(minLength: 48) }
-            Text(message.content)
-                .chatBubbleStyle(isUser: message.role == .user)
-                .contextMenu {
-                    Button {
-                        UIPasteboard.general.string = message.content
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
-                    }
+            VStack(alignment: .leading, spacing: 8) {
+                if message.role == .assistant, let reasoning = message.reasoning, !reasoning.isEmpty {
+                    ReasoningDisclosure(text: reasoning, initiallyExpanded: false)
                 }
+                Text(message.content)
+            }
+            .chatBubbleStyle(isUser: message.role == .user)
+            .contextMenu {
+                Button {
+                    UIPasteboard.general.string = message.content
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+            }
             if message.role == .assistant { Spacer(minLength: 48) }
         }
         .accessibilityElement(children: .combine)
@@ -26,16 +31,51 @@ struct MessageBubble: View {
 /// The in-flight assistant reply; becomes a MessageBubble once persisted.
 struct StreamingBubble: View {
     let text: String
+    var reasoning: String = ""
 
     var body: some View {
         HStack(alignment: .bottom) {
-            Text(text)
-                .chatBubbleStyle(isUser: false)
+            VStack(alignment: .leading, spacing: 8) {
+                if !reasoning.isEmpty {
+                    // Expanded while the model is thinking; collapses in the
+                    // persisted bubble (UX-6).
+                    ReasoningDisclosure(text: reasoning, initiallyExpanded: true)
+                }
+                if !text.isEmpty {
+                    Text(text)
+                }
+            }
+            .chatBubbleStyle(isUser: false)
             Spacer(minLength: 48)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Assistant is replying")
-        .accessibilityValue(text)
+        .accessibilityValue(text.isEmpty ? reasoning : text)
+    }
+}
+
+struct ReasoningDisclosure: View {
+    let text: String
+    let initiallyExpanded: Bool
+    @State private var isExpanded: Bool
+
+    init(text: String, initiallyExpanded: Bool) {
+        self.text = text
+        self.initiallyExpanded = initiallyExpanded
+        _isExpanded = State(initialValue: initiallyExpanded)
+    }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("Reasoning", systemImage: "brain")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

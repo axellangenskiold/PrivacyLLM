@@ -4,6 +4,8 @@ nonisolated enum ChatTurnEvent: Sendable {
     case userMessageSaved(Message)
     case modelLoadProgress(Double)
     case assistantDelta(String)
+    /// Live "thinking" output, rendered separately from the answer (UX-6).
+    case assistantReasoningDelta(String)
     case assistantCompleted(Message)
     /// Terminal failure. If tokens already streamed, the partial assistant
     /// message is persisted and attached so nothing the user saw is lost.
@@ -95,22 +97,37 @@ actor ChatOrchestrator {
         } else {
             (try? await settingsStore.globalSystemPrompt()) ?? nil
         }
-        let input = promptBuilder.build(
+        let inference = inference
+        let input = await promptBuilder.build(
             systemPrompt: systemPrompt,
             history: history + [userMessage],
-            config: config
+            config: config,
+            countTokens: { await inference.countTokens($0) }
         )
 
+        var parser = ThinkStreamParser()
         var content = ""
+        var reasoning = ""
         var stats: GenerationStats?
         var failureReason: String?
+
+        func emit(_ parsed: (reasoning: String, content: String)) {
+            if !parsed.reasoning.isEmpty {
+                reasoning += parsed.reasoning
+                continuation.yield(.assistantReasoningDelta(parsed.reasoning))
+            }
+            if !parsed.content.isEmpty {
+                content += parsed.content
+                continuation.yield(.assistantDelta(parsed.content))
+            }
+        }
+
         do {
             let stream = await inference.generate(input, config: config)
             for try await event in stream {
                 switch event {
                 case .token(let piece):
-                    content += piece
-                    continuation.yield(.assistantDelta(piece))
+                    emit(parser.feed(piece))
                 case .finished(let finalStats):
                     stats = finalStats
                 }
@@ -118,8 +135,9 @@ actor ChatOrchestrator {
         } catch {
             failureReason = String(localized: "Generation failed.")
         }
+        emit(parser.finish())
 
-        guard !content.isEmpty else {
+        guard !content.isEmpty || !reasoning.isEmpty else {
             continuation.yield(.turnFailed(
                 reason: failureReason ?? String(localized: "The model produced no output."),
                 partial: nil
@@ -127,10 +145,12 @@ actor ChatOrchestrator {
             return
         }
 
+        let trimmedReasoning = reasoning.trimmingCharacters(in: .whitespacesAndNewlines)
         let assistantMessage = Message(
             conversationID: conversation.id,
             role: .assistant,
-            content: content,
+            content: content.trimmingCharacters(in: .whitespacesAndNewlines),
+            reasoning: trimmedReasoning.isEmpty ? nil : trimmedReasoning,
             modelID: spec.id,
             stats: stats
         )

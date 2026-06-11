@@ -12,8 +12,10 @@ final class ChatViewModel {
     private(set) var conversation: Conversation
     private(set) var messages: [Message] = []
     private(set) var streamingText = ""
+    private(set) var streamingReasoning = ""
     private(set) var phase: Phase = .idle
     private(set) var errorMessage: String?
+    private(set) var activeRole: ModelRole = .fast
     var draft = ""
 
     private let environment: AppEnvironment
@@ -39,6 +41,15 @@ final class ChatViewModel {
 
     func loadMessages() async {
         messages = (try? await environment.messageStore.fetchAll(conversationID: conversation.id)) ?? []
+        activeRole = (try? await environment.settingsStore.value(for: .activeRole, default: ModelRole.fast)) ?? .fast
+    }
+
+    /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.
+    func setActiveRole(_ role: ModelRole) {
+        guard role != activeRole else { return }
+        activeRole = role
+        let settings = environment.settingsStore
+        Task { try? await settings.set(role, for: .activeRole) }
     }
 
     func send() {
@@ -74,13 +85,18 @@ final class ChatViewModel {
         case .assistantDelta(let piece):
             if phase != .generating { phase = .generating }
             streamingText += piece
+        case .assistantReasoningDelta(let piece):
+            if phase != .generating { phase = .generating }
+            streamingReasoning += piece
         case .assistantCompleted(let message):
             messages.append(message)
             streamingText = ""
+            streamingReasoning = ""
             phase = .idle
         case .turnFailed(let reason, let partial):
             if let partial { messages.append(partial) }
             streamingText = ""
+            streamingReasoning = ""
             errorMessage = reason
             phase = .idle
         }

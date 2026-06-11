@@ -53,9 +53,15 @@ final class AppEnvironment {
             settingsStore: SettingsStore(database: database),
             egressEventStore: EgressEventStore(database: database)
         )
+        // MLX needs a physical device's GPU; the simulator chats with the mock.
+        #if targetEnvironment(simulator)
+        let inference: any InferenceServicing = MockInferenceService()
+        #else
+        let inference: any InferenceServicing = MLXInferenceService()
+        #endif
         return AppEnvironment(
             database: database,
-            inference: MockInferenceService(),
+            inference: inference,
             modelManager: modelManager,
             search: MockSearchService(),
             documents: MockDocumentService(),

@@ -12,14 +12,14 @@ struct PromptBuilderTests {
         )
     }
 
-    @Test func systemPromptComesFirstAndHistoryKeepsOrder() {
+    @Test func systemPromptComesFirstAndHistoryKeepsOrder() async {
         let builder = PromptBuilder()
         let history = [
             message(.user, "first question", at: 1),
             message(.assistant, "first answer", at: 2),
             message(.user, "second question", at: 3),
         ]
-        let input = builder.build(
+        let input = await builder.build(
             systemPrompt: "Be concise.",
             history: history,
             config: GenerationConfig(contextLength: 4096)
@@ -28,7 +28,7 @@ struct PromptBuilderTests {
         #expect(input.messages.dropFirst().map(\.content) == ["first question", "first answer", "second question"])
     }
 
-    @Test func oldHistoryIsDroppedWhenBudgetIsTight() {
+    @Test func oldHistoryIsDroppedWhenBudgetIsTight() async {
         let builder = PromptBuilder()
         let oldPadding = String(repeating: "x", count: 4000)
         let history = [
@@ -40,17 +40,17 @@ struct PromptBuilderTests {
         // 1000-token message can't fit alongside the newer ones.
         var config = GenerationConfig(contextLength: 1100)
         config.sampling.maxTokens = 100
-        let input = builder.build(systemPrompt: nil, history: history, config: config)
+        let input = await builder.build(systemPrompt: nil, history: history, config: config)
         #expect(input.messages.map(\.content) == ["short answer", "newest question"])
     }
 
-    @Test func newestMessageSurvivesEvenWhenOversized() {
+    @Test func newestMessageSurvivesEvenWhenOversized() async {
         let builder = PromptBuilder()
         let huge = String(repeating: "y", count: 100_000)
         let history = [message(.user, huge, at: 1)]
         var config = GenerationConfig(contextLength: 1024)
         config.sampling.maxTokens = 256
-        let input = builder.build(systemPrompt: "sys", history: history, config: config)
+        let input = await builder.build(systemPrompt: "sys", history: history, config: config)
         let userMessages = input.messages.filter { $0.role == .user }
         #expect(userMessages.count == 1)
         let kept = userMessages[0].content
@@ -59,14 +59,87 @@ struct PromptBuilderTests {
         #expect(huge.hasSuffix(kept))
     }
 
-    @Test func nonChatRolesAreExcluded() {
+    @Test func nonChatRolesAreExcluded() async {
         let builder = PromptBuilder()
         let history = [
             message(.tool, "tool output", at: 1),
             message(.user, "hi", at: 2),
         ]
-        let input = builder.build(systemPrompt: nil, history: history, config: GenerationConfig())
+        let input = await builder.build(systemPrompt: nil, history: history, config: GenerationConfig())
         #expect(input.messages.map(\.role) == [.user])
+    }
+
+    @Test func customTokenCounterDrivesBudgeting() async {
+        let builder = PromptBuilder()
+        let history = [
+            message(.user, String(repeating: "a", count: 200), at: 1),
+            message(.assistant, String(repeating: "b", count: 50), at: 2),
+            message(.user, String(repeating: "c", count: 10), at: 3),
+        ]
+        var config = GenerationConfig(contextLength: 512)
+        config.sampling.maxTokens = 256
+        // 1 token per character: budget 256 fits 10 + 50 but not the 200.
+        let input = await builder.build(
+            systemPrompt: nil,
+            history: history,
+            config: config,
+            countTokens: { @Sendable text in text.count }
+        )
+        #expect(input.messages.count == 2)
+        #expect(input.messages.map(\.content).contains(String(repeating: "b", count: 50)))
+    }
+}
+
+struct ThinkStreamParserTests {
+    private func run(_ chunks: [String]) -> (reasoning: String, content: String) {
+        var parser = ThinkStreamParser()
+        var reasoning = ""
+        var content = ""
+        for chunk in chunks {
+            let out = parser.feed(chunk)
+            reasoning += out.reasoning
+            content += out.content
+        }
+        let tail = parser.finish()
+        reasoning += tail.reasoning
+        content += tail.content
+        return (reasoning, content)
+    }
+
+    @Test func tagsSplitAcrossChunkBoundaries() {
+        let result = run(["<thi", "nk>step one ", "and two</th", "ink>\n\nThe answer."])
+        #expect(result.reasoning == "step one and two")
+        #expect(result.content == "The answer.")
+    }
+
+    @Test func plainStreamPassesThrough() {
+        let result = run(["Hello", " world", "!"])
+        #expect(result.reasoning.isEmpty)
+        #expect(result.content == "Hello world!")
+    }
+
+    @Test func leadingWhitespaceBeforeTagIsSwallowed() {
+        let result = run(["\n\n", "<think>hmm</think>", "ok"])
+        #expect(result.reasoning == "hmm")
+        #expect(result.content == "ok")
+    }
+
+    @Test func emptyThinkBlock() {
+        let result = run(["<think>", "</think>", "\n\nAnswer"])
+        #expect(result.reasoning.isEmpty)
+        #expect(result.content == "Answer")
+    }
+
+    @Test func unterminatedThinkFlushesAsReasoning() {
+        let result = run(["<think>partial reasoning that never clo"])
+        #expect(result.reasoning == "partial reasoning that never clo")
+        #expect(result.content.isEmpty)
+    }
+
+    @Test func angleBracketContentIsNotMistakenForTag() {
+        let result = run(["<p>not a think tag</p> hello"])
+        #expect(result.reasoning.isEmpty)
+        #expect(result.content == "<p>not a think tag</p> hello")
     }
 }
 
@@ -102,6 +175,8 @@ struct ChatOrchestratorTests {
                 #expect(message.content == "Hi there")
             case .assistantDelta(let piece):
                 streamed += piece
+            case .assistantReasoningDelta:
+                break
             case .assistantCompleted(let message):
                 completed = message
             case .modelLoadProgress:

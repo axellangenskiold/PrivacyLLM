@@ -1,7 +1,9 @@
+import Combine
 import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel: ChatViewModel
+    @State private var thermalState = ProcessInfo.processInfo.thermalState
     @FocusState private var inputFocused: Bool
 
     init(conversation: Conversation, environment: AppEnvironment) {
@@ -10,12 +12,48 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if thermalState == .serious || thermalState == .critical {
+                thermalBanner
+            }
             messageList
             inputBar
         }
         .navigationTitle(viewModel.conversation.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Mode", selection: roleBinding) {
+                    Text("Fast").tag(ModelRole.fast)
+                    Text("Thinking").tag(ModelRole.thinking)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 200)
+                .accessibilityLabel("Model mode")
+            }
+        }
         .task { await viewModel.loadMessages() }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: ProcessInfo.thermalStateDidChangeNotification)
+                .receive(on: DispatchQueue.main)
+        ) { _ in
+            thermalState = ProcessInfo.processInfo.thermalState
+        }
+    }
+
+    private var roleBinding: Binding<ModelRole> {
+        Binding(
+            get: { viewModel.activeRole },
+            set: { viewModel.setActiveRole($0) }
+        )
+    }
+
+    private var thermalBanner: some View {
+        Label("Device is warm — Fast mode is recommended", systemImage: "thermometer.high")
+            .font(.footnote)
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .background(.orange.opacity(0.15))
     }
 
     private var messageList: some View {
@@ -44,6 +82,9 @@ struct ChatView: View {
             .onChange(of: viewModel.streamingText) {
                 proxy.scrollTo("bottom")
             }
+            .onChange(of: viewModel.streamingReasoning) {
+                proxy.scrollTo("bottom")
+            }
             .onChange(of: viewModel.messages.count) {
                 withAnimation { proxy.scrollTo("bottom") }
             }
@@ -52,8 +93,8 @@ struct ChatView: View {
 
     @ViewBuilder
     private var streamingRow: some View {
-        if !viewModel.streamingText.isEmpty {
-            StreamingBubble(text: viewModel.streamingText)
+        if !viewModel.streamingText.isEmpty || !viewModel.streamingReasoning.isEmpty {
+            StreamingBubble(text: viewModel.streamingText, reasoning: viewModel.streamingReasoning)
         } else if case .loadingModel(let progress) = viewModel.phase {
             HStack(spacing: 10) {
                 ProgressView(value: progress)

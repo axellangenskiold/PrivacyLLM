@@ -31,6 +31,12 @@ actor MockInferenceService: InferenceServicing {
         loadedSpec == nil ? nil : 900_000_000
     }
 
+    func countTokens(_ text: String) -> Int? {
+        nil
+    }
+
+    func reduceMemoryFootprint() {}
+
     func cancelGeneration() {
         generationTask?.cancel()
         generationTask = nil
