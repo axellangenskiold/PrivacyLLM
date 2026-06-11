@@ -1,0 +1,24 @@
+included:
+  - PrivacyLLM
+  - PrivacyLLMTests
+  - PrivacyLLMUITests
+
+disabled_rules:
+  - line_length
+  - todo
+  - trailing_whitespace # owned by SwiftFormat
+
+identifier_name:
+  excluded:
+    - id
+    - db
+    - x
+    - y
+
+type_body_length:
+  warning: 400
+  error: 600
+
+function_body_length:
+  warning: 80
+  error: 120

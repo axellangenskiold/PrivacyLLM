@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode 26
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project PrivacyLLM.xcodeproj -scheme PrivacyLLM
+
+      - name: Pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          candidates = [d for rt in sorted(devices, reverse=True) for d in devices[rt] if d["isAvailable"] and "iPhone" in d["name"]]
+          print(candidates[0]["udid"])')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Unit tests
+        run: |
+          xcodebuild test \
+            -project PrivacyLLM.xcodeproj \
+            -scheme PrivacyLLM \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing PrivacyLLMTests \
+            CODE_SIGNING_ALLOWED=NO
+
+  lint:
+    runs-on: macos-26
+    timeout-minutes: 15
+    # Advisory until the lint toolchain is exercised locally; tighten after first green run.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: brew install swiftlint swiftformat
+      - name: SwiftLint
+        run: swiftlint --strict
+      - name: SwiftFormat (lint only)
+        run: swiftformat --lint .

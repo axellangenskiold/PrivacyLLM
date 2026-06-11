@@ -1,0 +1,7 @@
+--swiftversion 6.0
+--indent 4
+--maxwidth none
+--commas inline
+--trimwhitespace always
+--disable wrapMultilineStatementBraces, hoistPatternLet, andOperator
+--exclude DerivedData, .build
