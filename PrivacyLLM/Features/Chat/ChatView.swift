@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     private let environment: AppEnvironment
@@ -9,6 +10,7 @@ struct ChatView: View {
     @State private var editText = ""
     @State private var showSystemPrompt = false
     @State private var systemPromptText = ""
+    @State private var showAttachImporter = false
     @FocusState private var inputFocused: Bool
 
     init(conversation: Conversation, environment: AppEnvironment) {
@@ -66,6 +68,11 @@ struct ChatView: View {
         }
         .sheet(item: $editTarget) { message in
             editSheet(for: message)
+        }
+        .fileImporter(isPresented: $showAttachImporter, allowedContentTypes: [UTType.pdf]) { result in
+            if case .success(let url) = result {
+                viewModel.attachDocument(at: url)
+            }
         }
         .sheet(isPresented: $showSystemPrompt) {
             systemPromptSheet
@@ -160,6 +167,28 @@ struct ChatView: View {
                     if viewModel.messages.isEmpty, !viewModel.isBusy {
                         emptyHint
                             .padding(.top, 48)
+                    }
+                    if viewModel.isIndexingAttachment {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("Indexing document on this device…")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if let notice = viewModel.attachmentNotice {
+                        HStack(spacing: 8) {
+                            Image(systemName: "paperclip")
+                                .foregroundStyle(.secondary)
+                            Text(notice)
+                                .font(.footnote)
+                            Spacer()
+                            Button("OK") { viewModel.dismissAttachmentNotice() }
+                                .font(.footnote.bold())
+                        }
+                        .padding(10)
+                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
                     }
                     ForEach(viewModel.messages) { message in
                         MessageBubble(
@@ -285,6 +314,15 @@ struct ChatView: View {
     private var inputBar: some View {
         @Bindable var viewModel = viewModel
         return HStack(alignment: .bottom, spacing: 8) {
+            Button {
+                showAttachImporter = true
+            } label: {
+                Image(systemName: "paperclip")
+                    .font(.system(size: 21))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 5)
+            .accessibilityLabel("Attach a PDF to this chat")
             Button {
                 viewModel.setSearchEnabled(!viewModel.searchEnabled)
             } label: {

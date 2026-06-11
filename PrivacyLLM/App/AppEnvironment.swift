@@ -81,7 +81,10 @@ final class AppEnvironment {
             database: database,
             inference: inference,
             modelManager: modelManager,
-            documents: MockDocumentService(),
+            documents: RAGDocumentService(
+                store: DocumentStore(database: database),
+                embedder: ContextualEmbeddingService()
+            ),
             voice: MockVoiceService()
         )
     }

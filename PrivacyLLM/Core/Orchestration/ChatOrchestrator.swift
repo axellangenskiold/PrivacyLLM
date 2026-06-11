@@ -27,6 +27,7 @@ actor ChatOrchestrator {
     private let messageStore: MessageStore
     private let conversationStore: ConversationStore
     private let settingsStore: SettingsStore
+    private let documents: any DocumentServicing
     private let toolRouter: ToolRouter
     private let promptBuilder = PromptBuilder()
     private var turnTask: Task<Void, Never>?
@@ -37,6 +38,7 @@ actor ChatOrchestrator {
         messageStore: MessageStore,
         conversationStore: ConversationStore,
         settingsStore: SettingsStore,
+        documents: any DocumentServicing = MockDocumentService(),
         tools: [any LocalTool] = [DateTimeTool(), CalculatorTool(), UnitConversionTool()]
     ) {
         self.inference = inference
@@ -44,6 +46,7 @@ actor ChatOrchestrator {
         self.messageStore = messageStore
         self.conversationStore = conversationStore
         self.settingsStore = settingsStore
+        self.documents = documents
         self.toolRouter = ToolRouter(tools: tools, settingsStore: settingsStore)
     }
 
@@ -120,10 +123,21 @@ actor ChatOrchestrator {
         }
 
         let config = await generationConfig()
-        let systemPrompt: String? = if let custom = conversation.systemPrompt, !custom.isEmpty {
+        let basePrompt: String? = if let custom = conversation.systemPrompt, !custom.isEmpty {
             custom
         } else {
             (try? await settingsStore.globalSystemPrompt()) ?? nil
+        }
+
+        // Document Q&A (§3.4): retrieve before generating and ride the
+        // excerpts in the system prompt; short single docs go in whole.
+        let queryText = fullHistory.last(where: { $0.role == .user })?.content ?? ""
+        let docContext = await documentContext(for: queryText, conversationID: conversation.id)
+        let systemPrompt: String? = switch (basePrompt, docContext.block) {
+        case (nil, nil): nil
+        case (let prompt?, nil): prompt
+        case (nil, let block?): block
+        case (let prompt?, let block?): prompt + "\n\n" + block
         }
         let inference = inference
         let searchEnabled = (try? await settingsStore.searchEnabled()) ?? false
@@ -136,7 +150,7 @@ actor ChatOrchestrator {
         var workingHistory = fullHistory
         var content = ""
         var reasoning = ""
-        var collectedSources: [SourceAttribution] = []
+        var collectedSources: [SourceAttribution] = docContext.sources
         var stats: GenerationStats?
         var failureReason: String?
 
@@ -256,6 +270,65 @@ actor ChatOrchestrator {
 
     private static func rawBlock(for call: ToolCall) -> String {
         "<tool_call>{\"name\": \"\(call.name)\", \"arguments\": \(call.argumentsJSON)}</tool_call>"
+    }
+
+    /// Builds the document-context block for this turn (FR-27, §3.4).
+    private func documentContext(
+        for query: String,
+        conversationID: UUID
+    ) async -> (block: String?, sources: [SourceAttribution]) {
+        guard let allDocs = try? await documents.documents() else { return (nil, []) }
+        let visible = allDocs.filter { doc in
+            guard doc.indexState == .ready else { return false }
+            switch doc.scope {
+            case .global: return true
+            case .conversation(let id): return id == conversationID
+            }
+        }
+        guard !visible.isEmpty, !query.isEmpty else { return (nil, []) }
+
+        // A single short document fits whole — skip retrieval (§3.4).
+        if visible.count == 1,
+           let doc = visible.first,
+           let fullText = (try? await documents.fullTextIfShort(documentID: doc.id, maxCharacters: 6000)) ?? nil {
+            let block = """
+            The user has attached the document "\(doc.title)". Its full text:
+
+            \(fullText)
+
+            Use it to answer when relevant, and cite the document by name.
+            """
+            return (block, [SourceAttribution(kind: .document, title: doc.title, documentID: doc.id)])
+        }
+
+        guard let retrieved = try? await documents.retrieve(query: query, conversationID: conversationID, topK: 4),
+              !retrieved.isEmpty
+        else { return (nil, []) }
+
+        let excerpts = retrieved.map { item in
+            let page = item.chunk.pageNumber.map { ", page \($0)" } ?? ""
+            return "[\(item.documentTitle)\(page)]: \(item.chunk.text)"
+        }
+        .joined(separator: "\n\n")
+        let block = """
+        Relevant excerpts from the user's documents:
+
+        \(excerpts)
+
+        Answer using these excerpts when relevant, and cite the document name and page.
+        """
+        var seen = Set<String>()
+        let sources = retrieved.compactMap { item -> SourceAttribution? in
+            let key = "\(item.chunk.documentID)-\(item.chunk.pageNumber ?? 0)"
+            guard seen.insert(key).inserted else { return nil }
+            return SourceAttribution(
+                kind: .document,
+                title: item.documentTitle,
+                documentID: item.chunk.documentID,
+                pageNumber: item.chunk.pageNumber
+            )
+        }
+        return (block, sources)
     }
 
     private func resolveActiveModel() async -> (ModelSpec, URL)? {

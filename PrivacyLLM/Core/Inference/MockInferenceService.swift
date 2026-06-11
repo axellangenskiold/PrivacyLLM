@@ -7,6 +7,8 @@ actor MockInferenceService: InferenceServicing {
     private var generationTask: Task<Void, Never>?
     private let tokenDelay: Duration
     private var replyQueue: [String]
+    /// Captured for tests asserting what the orchestrator actually sent.
+    private(set) var lastInput: PromptInput?
 
     init(tokenDelay: Duration = .milliseconds(24), scriptedReply: String? = nil) {
         self.tokenDelay = tokenDelay
@@ -50,6 +52,7 @@ actor MockInferenceService: InferenceServicing {
     }
 
     func generate(_ input: PromptInput, config: GenerationConfig) -> AsyncThrowingStream<InferenceEvent, Error> {
+        lastInput = input
         let reply = nextReply() ?? Self.cannedReply(
             to: input.messages.last(where: { $0.role == .user })?.content ?? "",
             thinking: config.thinkingEnabled

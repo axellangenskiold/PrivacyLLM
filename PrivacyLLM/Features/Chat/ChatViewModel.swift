@@ -63,6 +63,32 @@ final class ChatViewModel {
         Task { try? await settings.set(enabled, for: .searchEnabled) }
     }
 
+    // MARK: Document attachment (OD-6: per-conversation scope)
+
+    private(set) var isIndexingAttachment = false
+    private(set) var attachmentNotice: String?
+
+    func attachDocument(at url: URL) {
+        guard !isIndexingAttachment else { return }
+        isIndexingAttachment = true
+        attachmentNotice = nil
+        let service = environment.documents
+        let conversationID = conversation.id
+        Task {
+            do {
+                let meta = try await service.importPDF(at: url, scope: .conversation(conversationID))
+                attachmentNotice = String(localized: "“\(meta.title)” attached — ask away.")
+            } catch {
+                attachmentNotice = DocumentsViewModel.message(for: error)
+            }
+            isIndexingAttachment = false
+        }
+    }
+
+    func dismissAttachmentNotice() {
+        attachmentNotice = nil
+    }
+
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.
     func setActiveRole(_ role: ModelRole) {
         guard role != activeRole else { return }

@@ -73,6 +73,28 @@ struct SearchParsingTests {
     }
 }
 
+/// Search-specific URL mock — deliberately separate from HFMockURLProtocol so
+/// the two serialized suites can't race each other's static fixtures.
+private final class SearchMockURLProtocol: URLProtocol {
+    nonisolated(unsafe) static var responses: [String: Data] = [:]
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let url = request.url, let body = Self.responses[url.absoluteString] else {
+            client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
+            return
+        }
+        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
 /// Records egress notifications without any UI.
 private actor EgressRecorder: EgressReporting {
     private(set) var fired: [(query: String, host: String)] = []
@@ -94,13 +116,13 @@ private actor EgressRecorder: EgressReporting {
 @Suite(.serialized)
 struct SearchServiceTests {
     @Test func searchFiresEgressExactlyOncePerRequest(/* TR-22 logic */) async throws {
-        HFMockURLProtocol.responses = [
+        SearchMockURLProtocol.responses = [
             "https://html.duckduckgo.com/html/?q=weather%20stockholm": Data(try fixtureHTML("ddg-results").utf8),
         ]
         let recorder = EgressRecorder()
         let service = HTMLSearchService(
             provider: duckDuckGoProvider,
-            session: HTMLSearchService.makeSession(protocolClasses: [HFMockURLProtocol.self]),
+            session: HTMLSearchService.makeSession(protocolClasses: [SearchMockURLProtocol.self]),
             egress: recorder
         )
         let results = try await service.search("weather stockholm", maxResults: 3)
@@ -114,11 +136,11 @@ struct SearchServiceTests {
     }
 
     @Test func networkFailureStillEndsEgress() async throws {
-        HFMockURLProtocol.responses = [:]
+        SearchMockURLProtocol.responses = [:]
         let recorder = EgressRecorder()
         let service = HTMLSearchService(
             provider: duckDuckGoProvider,
-            session: HTMLSearchService.makeSession(protocolClasses: [HFMockURLProtocol.self]),
+            session: HTMLSearchService.makeSession(protocolClasses: [SearchMockURLProtocol.self]),
             egress: recorder
         )
         await #expect(throws: SearchError.self) {

@@ -3,6 +3,7 @@ import SwiftUI
 nonisolated enum AppRoute: Hashable {
     case chat(Conversation)
     case models
+    case documents
 }
 
 struct ConversationListView: View {
@@ -29,6 +30,13 @@ struct ConversationListView: View {
                             Label("Models", systemImage: "cpu")
                         }
                     }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            path.append(.documents)
+                        } label: {
+                            Label("Documents", systemImage: "doc.text")
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             createAndOpen()
@@ -43,6 +51,8 @@ struct ConversationListView: View {
                         ChatView(conversation: conversation, environment: environment)
                     case .models:
                         ModelManagerView(environment: environment)
+                    case .documents:
+                        DocumentsView(environment: environment)
                     }
                 }
                 .task { await viewModel.refresh() }
