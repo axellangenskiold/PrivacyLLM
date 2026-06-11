@@ -85,7 +85,7 @@ final class AppEnvironment {
                 store: DocumentStore(database: database),
                 embedder: ContextualEmbeddingService()
             ),
-            voice: MockVoiceService()
+            voice: SpeechVoiceService()
         )
     }
 

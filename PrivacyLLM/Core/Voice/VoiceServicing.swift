@@ -35,11 +35,16 @@ nonisolated protocol VoiceServicing: Sendable {
 /// Scripted transcripts for simulator, previews, and tests.
 actor MockVoiceService: VoiceServicing {
     private let script: [String]
+    private let partialDelay: Duration
     private var continuation: AsyncThrowingStream<VoiceTranscript, Error>.Continuation?
     private var feedTask: Task<Void, Never>?
 
-    init(script: [String] = ["Hello", "Hello there,", "Hello there, what can", "Hello there, what can you do?"]) {
+    init(
+        script: [String] = ["Hello", "Hello there,", "Hello there, what can", "Hello there, what can you do?"],
+        partialDelay: Duration = .milliseconds(350)
+    ) {
         self.script = script
+        self.partialDelay = partialDelay
     }
 
     func availability() -> VoiceAvailability { .available }
@@ -50,10 +55,11 @@ actor MockVoiceService: VoiceServicing {
         let (stream, continuation) = AsyncThrowingStream<VoiceTranscript, Error>.makeStream()
         self.continuation = continuation
         let script = script
+        let delay = partialDelay
         feedTask = Task {
             for partial in script.dropLast() {
                 if Task.isCancelled { return }
-                try? await Task.sleep(for: .milliseconds(350))
+                try? await Task.sleep(for: delay)
                 continuation.yield(.partial(partial))
             }
         }

@@ -205,6 +205,9 @@ struct ChatView: View {
                     if let error = viewModel.errorMessage {
                         errorRow(error)
                     }
+                    if viewModel.voicePermissionDenied {
+                        voicePermissionRow
+                    }
                     Color.clear
                         .frame(height: 1)
                         .id("bottom")
@@ -297,6 +300,30 @@ struct ChatView: View {
         .padding()
     }
 
+    /// Clear guidance when mic/speech permission is denied (FR-35).
+    private var voicePermissionRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Microphone access is off", systemImage: "mic.slash.fill")
+                .font(.footnote.bold())
+            Text("To dictate messages, allow microphone and speech recognition in Settings. Everything is transcribed on this device.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                .font(.footnote.bold())
+                Button("Dismiss") { viewModel.dismissVoicePermissionHelp() }
+                    .font(.footnote)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+    }
+
     private func errorRow(_ text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -348,6 +375,24 @@ struct ChatView: View {
                         .font(.system(size: 30))
                 }
                 .accessibilityLabel("Stop generating")
+            } else if viewModel.isRecording {
+                Button {
+                    viewModel.toggleRecording()
+                } label: {
+                    Image(systemName: "mic.badge.xmark")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.red)
+                        .symbolEffect(.pulse, options: .repeating)
+                }
+                .accessibilityLabel("Stop dictation")
+            } else if viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    viewModel.toggleRecording()
+                } label: {
+                    Image(systemName: "mic.circle.fill")
+                        .font(.system(size: 30))
+                }
+                .accessibilityLabel("Dictate message")
             } else {
                 Button {
                     viewModel.send()

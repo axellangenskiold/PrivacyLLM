@@ -89,6 +89,61 @@ final class ChatViewModel {
         attachmentNotice = nil
     }
 
+    // MARK: Voice input (FR-32...35)
+
+    private(set) var isRecording = false
+    private(set) var voicePermissionDenied = false
+    private var dictationBase = ""
+
+    func toggleRecording() {
+        if isRecording {
+            let voice = environment.voice
+            Task { await voice.stopTranscribing() }
+        } else {
+            startRecording()
+        }
+    }
+
+    private func startRecording() {
+        guard !isRecording, phase == .idle else { return }
+        voicePermissionDenied = false
+        Task {
+            let availability = await environment.voice.requestAuthorization()
+            switch availability {
+            case .available:
+                break
+            case .denied, .restricted:
+                voicePermissionDenied = true
+                return
+            case .permissionNotDetermined:
+                return
+            case .unsupported:
+                errorMessage = String(localized: "On-device dictation isn't available on this device or language.")
+                return
+            }
+
+            // Dictation appends to whatever was already typed (FR-34).
+            dictationBase = draft.isEmpty ? "" : draft + " "
+            isRecording = true
+            do {
+                let stream = try await environment.voice.startTranscribing()
+                for try await transcript in stream {
+                    switch transcript {
+                    case .partial(let text), .final(let text):
+                        draft = dictationBase + text
+                    }
+                }
+            } catch {
+                errorMessage = String(localized: "Dictation failed. Try again.")
+            }
+            isRecording = false
+        }
+    }
+
+    func dismissVoicePermissionHelp() {
+        voicePermissionDenied = false
+    }
+
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.
     func setActiveRole(_ role: ModelRole) {
         guard role != activeRole else { return }
