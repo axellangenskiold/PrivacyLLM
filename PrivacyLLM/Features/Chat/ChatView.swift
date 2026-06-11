@@ -193,6 +193,9 @@ struct ChatView: View {
 
     @ViewBuilder
     private var streamingRow: some View {
+        ForEach(viewModel.toolActivity) { activity in
+            toolActivityRow(activity)
+        }
         if !viewModel.streamingText.isEmpty || !viewModel.streamingReasoning.isEmpty {
             StreamingBubble(text: viewModel.streamingText, reasoning: viewModel.streamingReasoning)
         } else if case .loadingModel(let progress) = viewModel.phase {
@@ -214,6 +217,34 @@ struct ChatView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private func toolActivityRow(_ activity: ChatViewModel.ToolActivity) -> some View {
+        HStack(spacing: 8) {
+            if activity.isRunning {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: activity.isError ? "xmark.circle" : "checkmark.circle")
+                    .foregroundStyle(activity.isError ? .orange : .green)
+                    .font(.footnote)
+            }
+            Text(Self.toolDisplayName(activity.name))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private static func toolDisplayName(_ name: String) -> String {
+        switch name {
+        case "current_datetime": String(localized: "Checking the clock")
+        case "calculate": String(localized: "Calculating")
+        case "convert_units": String(localized: "Converting units")
+        case "web_search": String(localized: "Searching the web")
+        default: String(localized: "Running \(name)")
         }
     }
 

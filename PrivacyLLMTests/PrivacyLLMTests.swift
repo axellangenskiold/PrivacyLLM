@@ -43,6 +43,7 @@ struct MockInferenceServiceTests {
         for try await event in stream {
             switch event {
             case .token(let piece): text += piece
+            case .toolCall: break
             case .finished(let finalStats): stats = finalStats
             }
         }

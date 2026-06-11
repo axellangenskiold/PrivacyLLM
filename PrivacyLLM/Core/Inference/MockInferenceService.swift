@@ -6,11 +6,18 @@ actor MockInferenceService: InferenceServicing {
     private var loadedSpec: ModelSpec?
     private var generationTask: Task<Void, Never>?
     private let tokenDelay: Duration
-    private let scriptedReply: String?
+    private var replyQueue: [String]
 
     init(tokenDelay: Duration = .milliseconds(24), scriptedReply: String? = nil) {
         self.tokenDelay = tokenDelay
-        self.scriptedReply = scriptedReply
+        replyQueue = scriptedReply.map { [$0] } ?? []
+    }
+
+    /// Each generate call pops the next reply; the last one repeats. Lets
+    /// tests script multi-round agent conversations.
+    init(tokenDelay: Duration = .milliseconds(24), replies: [String]) {
+        self.tokenDelay = tokenDelay
+        replyQueue = replies
     }
 
     var loadedModel: ModelSpec? { loadedSpec }
@@ -43,7 +50,7 @@ actor MockInferenceService: InferenceServicing {
     }
 
     func generate(_ input: PromptInput, config: GenerationConfig) -> AsyncThrowingStream<InferenceEvent, Error> {
-        let reply = scriptedReply ?? Self.cannedReply(
+        let reply = nextReply() ?? Self.cannedReply(
             to: input.messages.last(where: { $0.role == .user })?.content ?? "",
             thinking: config.thinkingEnabled
         )
@@ -76,6 +83,11 @@ actor MockInferenceService: InferenceServicing {
         generationTask = task
         continuation.onTermination = { _ in task.cancel() }
         return stream
+    }
+
+    private func nextReply() -> String? {
+        guard !replyQueue.isEmpty else { return nil }
+        return replyQueue.count == 1 ? replyQueue[0] : replyQueue.removeFirst()
     }
 
     private static func seconds(since start: ContinuousClock.Instant) -> Double {

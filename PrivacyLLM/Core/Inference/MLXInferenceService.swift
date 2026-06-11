@@ -116,6 +116,8 @@ actor MLXInferenceService: InferenceServicing {
                                 firstTokenSeconds = Self.seconds(since: start)
                             }
                             continuation.yield(.token(text))
+                        case .toolCall(let call):
+                            continuation.yield(.toolCall(Self.domainToolCall(from: call)))
                         case .info(let completionInfo):
                             info = completionInfo
                         default:
@@ -153,7 +155,44 @@ actor MLXInferenceService: InferenceServicing {
             // Qwen3-style chat templates honor enable_thinking (OD-2, MR-5).
             additionalContext["enable_thinking"] = config.thinkingEnabled
         }
-        return UserInput(chat: chat, additionalContext: additionalContext.isEmpty ? nil : additionalContext)
+        return UserInput(
+            chat: chat,
+            tools: mlxToolSpecs(from: input.tools),
+            additionalContext: additionalContext.isEmpty ? nil : additionalContext
+        )
+    }
+
+    /// Bridges the app's tool specs into the template-native OpenAI-style
+    /// dictionaries the chat template renders (TL-1).
+    private static func mlxToolSpecs(from specs: [PrivacyLLM.ToolSpec]) -> [MLXLMCommon.ToolSpec]? {
+        guard !specs.isEmpty else { return nil }
+        return specs.map { spec in
+            var parameters: any Sendable = [String: String]()
+            if let decoded = try? JSONDecoder().decode(JSONValue.self, from: Data(spec.parametersJSONSchema.utf8)),
+               let object = decoded.anyValue as? [String: any Sendable] {
+                parameters = object
+            }
+            return [
+                "type": "function",
+                "function": [
+                    "name": spec.name,
+                    "description": spec.summary,
+                    "parameters": parameters,
+                ] as [String: any Sendable],
+            ]
+        }
+    }
+
+    private static func domainToolCall(from call: MLXLMCommon.ToolCall) -> PrivacyLLM.ToolCall {
+        let argumentsObject = call.function.arguments.mapValues { $0.anyValue }
+        let argumentsJSON: String
+        if JSONSerialization.isValidJSONObject(argumentsObject),
+           let data = try? JSONSerialization.data(withJSONObject: argumentsObject) {
+            argumentsJSON = String(decoding: data, as: UTF8.self)
+        } else {
+            argumentsJSON = "{}"
+        }
+        return PrivacyLLM.ToolCall(name: call.function.name, argumentsJSON: argumentsJSON)
     }
 
     private static func seconds(since start: ContinuousClock.Instant) -> Double {

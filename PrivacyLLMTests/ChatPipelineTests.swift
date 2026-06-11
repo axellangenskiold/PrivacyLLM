@@ -59,14 +59,18 @@ struct PromptBuilderTests {
         #expect(huge.hasSuffix(kept))
     }
 
-    @Test func nonChatRolesAreExcluded() async {
+    @Test func toolMessagesRideAlongButHistorySystemIsExcluded() async {
         let builder = PromptBuilder()
         let history = [
-            message(.tool, "tool output", at: 1),
-            message(.user, "hi", at: 2),
+            message(.system, "stray system in history", at: 0),
+            message(.assistant, "<tool_call>…</tool_call>", at: 1),
+            message(.tool, "tool output", at: 2),
+            message(.user, "hi", at: 3),
         ]
-        let input = await builder.build(systemPrompt: nil, history: history, config: GenerationConfig())
-        #expect(input.messages.map(\.role) == [.user])
+        let input = await builder.build(systemPrompt: "real system", history: history, config: GenerationConfig())
+        // The only system message is the one the builder injects itself.
+        #expect(input.messages.map(\.role) == [.system, .assistant, .tool, .user])
+        #expect(input.messages.first?.content == "real system")
     }
 
     @Test func customTokenCounterDrivesBudgeting() async {
@@ -175,7 +179,7 @@ struct ChatOrchestratorTests {
                 #expect(message.content == "Hi there")
             case .assistantDelta(let piece):
                 streamed += piece
-            case .assistantReasoningDelta:
+            case .assistantReasoningDelta, .toolStarted, .toolFinished:
                 break
             case .assistantCompleted(let message):
                 completed = message

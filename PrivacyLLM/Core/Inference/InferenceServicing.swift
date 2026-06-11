@@ -1,9 +1,11 @@
 import Foundation
 
 nonisolated enum InferenceEvent: Sendable {
-    /// A raw text delta from the model. Thinking-block and tool-call parsing
-    /// happen above this layer.
+    /// A raw text delta from the model. Thinking-block and textual tool-call
+    /// parsing happen above this layer.
     case token(String)
+    /// A tool call the engine parsed natively from the model's template format.
+    case toolCall(ToolCall)
     case finished(GenerationStats)
 }
 

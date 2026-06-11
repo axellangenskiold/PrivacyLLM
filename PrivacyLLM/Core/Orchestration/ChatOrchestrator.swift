@@ -6,6 +6,8 @@ nonisolated enum ChatTurnEvent: Sendable {
     case assistantDelta(String)
     /// Live "thinking" output, rendered separately from the answer (UX-6).
     case assistantReasoningDelta(String)
+    case toolStarted(name: String)
+    case toolFinished(name: String, isError: Bool)
     case assistantCompleted(Message)
     /// Terminal failure. If tokens already streamed, the partial assistant
     /// message is persisted and attached so nothing the user saw is lost.
@@ -13,14 +15,19 @@ nonisolated enum ChatTurnEvent: Sendable {
 }
 
 /// Owns one conversation's turn lifecycle (§3.3): persists the user message,
-/// resolves and loads the active model, builds the prompt, streams tokens,
-/// and persists the assistant reply. Stop/cancel keeps the partial text (FR-2).
+/// resolves and loads the active model, builds the prompt, streams tokens
+/// through the bounded agent loop, and persists the assistant reply.
+/// Stop/cancel keeps the partial text (FR-2).
 actor ChatOrchestrator {
+    /// Max tool rounds per turn — the runaway-loop guard (TL-2).
+    static let maxToolRounds = 3
+
     private let inference: any InferenceServicing
     private let modelManager: any ModelManaging
     private let messageStore: MessageStore
     private let conversationStore: ConversationStore
     private let settingsStore: SettingsStore
+    private let toolRouter: ToolRouter
     private let promptBuilder = PromptBuilder()
     private var turnTask: Task<Void, Never>?
 
@@ -29,13 +36,15 @@ actor ChatOrchestrator {
         modelManager: any ModelManaging,
         messageStore: MessageStore,
         conversationStore: ConversationStore,
-        settingsStore: SettingsStore
+        settingsStore: SettingsStore,
+        tools: [any LocalTool] = [DateTimeTool(), CalculatorTool(), UnitConversionTool()]
     ) {
         self.inference = inference
         self.modelManager = modelManager
         self.messageStore = messageStore
         self.conversationStore = conversationStore
         self.settingsStore = settingsStore
+        self.toolRouter = ToolRouter(tools: tools, settingsStore: settingsStore)
     }
 
     func send(text: String, conversation: Conversation, history: [Message]) -> AsyncStream<ChatTurnEvent> {
@@ -117,44 +126,101 @@ actor ChatOrchestrator {
             (try? await settingsStore.globalSystemPrompt()) ?? nil
         }
         let inference = inference
-        let input = await promptBuilder.build(
-            systemPrompt: systemPrompt,
-            history: fullHistory,
-            config: config,
-            countTokens: { await inference.countTokens($0) }
-        )
+        let searchEnabled = (try? await settingsStore.searchEnabled()) ?? false
+        let toolSpecs = spec.capabilities.toolCalling
+            ? toolRouter.specs(includeEgressTools: searchEnabled)
+            : []
 
-        var parser = ThinkStreamParser()
+        // Agent loop (TL-1/2): generate → run any tool calls → feed results
+        // back as tool messages → resume, at most maxToolRounds times.
+        var workingHistory = fullHistory
         var content = ""
         var reasoning = ""
+        var collectedSources: [SourceAttribution] = []
         var stats: GenerationStats?
         var failureReason: String?
 
-        func emit(_ parsed: (reasoning: String, content: String)) {
-            if !parsed.reasoning.isEmpty {
-                reasoning += parsed.reasoning
-                continuation.yield(.assistantReasoningDelta(parsed.reasoning))
-            }
-            if !parsed.content.isEmpty {
-                content += parsed.content
-                continuation.yield(.assistantDelta(parsed.content))
-            }
-        }
+        for round in 0...Self.maxToolRounds {
+            var thinkParser = ThinkStreamParser()
+            var toolParser = ToolCallParser()
+            var roundRawAssistant = ""
+            var roundCalls: [ParsedToolCall] = []
 
-        do {
-            let stream = await inference.generate(input, config: config)
-            for try await event in stream {
-                switch event {
-                case .token(let piece):
-                    emit(parser.feed(piece))
-                case .finished(let finalStats):
-                    stats = finalStats
-                }
+            func emitVisible(_ piece: String) {
+                guard !piece.isEmpty else { return }
+                content += piece
+                continuation.yield(.assistantDelta(piece))
             }
-        } catch {
-            failureReason = String(localized: "Generation failed.")
+            func processContent(_ piece: String) {
+                guard !piece.isEmpty else { return }
+                roundRawAssistant += piece
+                let parsed = toolParser.feed(piece)
+                emitVisible(parsed.visible)
+                roundCalls += parsed.calls
+            }
+            func processToken(_ piece: String) {
+                let thought = thinkParser.feed(piece)
+                if !thought.reasoning.isEmpty {
+                    reasoning += thought.reasoning
+                    continuation.yield(.assistantReasoningDelta(thought.reasoning))
+                }
+                processContent(thought.content)
+            }
+
+            do {
+                let input = await promptBuilder.build(
+                    systemPrompt: systemPrompt,
+                    history: workingHistory,
+                    config: config,
+                    tools: toolSpecs,
+                    countTokens: { await inference.countTokens($0) }
+                )
+                let stream = await inference.generate(input, config: config)
+                for try await event in stream {
+                    switch event {
+                    case .token(let piece):
+                        processToken(piece)
+                    case .toolCall(let call):
+                        roundCalls.append(ParsedToolCall(call: call, rawBlock: Self.rawBlock(for: call)))
+                    case .finished(let finalStats):
+                        stats = finalStats
+                    }
+                }
+            } catch {
+                failureReason = String(localized: "Generation failed.")
+                break
+            }
+            let thinkTail = thinkParser.finish()
+            if !thinkTail.reasoning.isEmpty {
+                reasoning += thinkTail.reasoning
+                continuation.yield(.assistantReasoningDelta(thinkTail.reasoning))
+            }
+            processContent(thinkTail.content)
+            let toolTail = toolParser.finish()
+            emitVisible(toolTail.visible)
+            roundCalls += toolTail.calls
+
+            guard !roundCalls.isEmpty, round < Self.maxToolRounds else { break }
+
+            // Tool exchange lives only in the working transcript, not the database.
+            workingHistory.append(Message(
+                conversationID: conversation.id,
+                role: .assistant,
+                content: roundRawAssistant
+            ))
+            for parsed in roundCalls {
+                let name = parsed.call?.name ?? "invalid"
+                continuation.yield(.toolStarted(name: name))
+                let result = await toolRouter.execute(parsed)
+                collectedSources += result.sources
+                continuation.yield(.toolFinished(name: name, isError: result.isError))
+                workingHistory.append(Message(
+                    conversationID: conversation.id,
+                    role: .tool,
+                    content: result.content
+                ))
+            }
         }
-        emit(parser.finish())
 
         guard !content.isEmpty || !reasoning.isEmpty else {
             continuation.yield(.turnFailed(
@@ -171,7 +237,8 @@ actor ChatOrchestrator {
             content: content.trimmingCharacters(in: .whitespacesAndNewlines),
             reasoning: trimmedReasoning.isEmpty ? nil : trimmedReasoning,
             modelID: spec.id,
-            stats: stats
+            stats: stats,
+            sources: collectedSources
         )
         do {
             try await messageStore.append(assistantMessage)
@@ -185,6 +252,10 @@ actor ChatOrchestrator {
         } else {
             continuation.yield(.assistantCompleted(assistantMessage))
         }
+    }
+
+    private static func rawBlock(for call: ToolCall) -> String {
+        "<tool_call>{\"name\": \"\(call.name)\", \"arguments\": \(call.argumentsJSON)}</tool_call>"
     }
 
     private func resolveActiveModel() async -> (ModelSpec, URL)? {

@@ -11,8 +11,16 @@ final class ChatViewModel {
 
     private(set) var conversation: Conversation
     private(set) var messages: [Message] = []
+    struct ToolActivity: Identifiable, Equatable {
+        let id = UUID()
+        var name: String
+        var isRunning: Bool
+        var isError: Bool
+    }
+
     private(set) var streamingText = ""
     private(set) var streamingReasoning = ""
+    private(set) var toolActivity: [ToolActivity] = []
     private(set) var phase: Phase = .idle
     private(set) var errorMessage: String?
     private(set) var activeRole: ModelRole = .fast
@@ -141,6 +149,13 @@ final class ChatViewModel {
             if phase != .generating { phase = .generating }
             pendingReasoning += piece
             scheduleStreamFlush()
+        case .toolStarted(let name):
+            toolActivity.append(ToolActivity(name: name, isRunning: true, isError: false))
+        case .toolFinished(let name, let isError):
+            if let index = toolActivity.lastIndex(where: { $0.name == name && $0.isRunning }) {
+                toolActivity[index].isRunning = false
+                toolActivity[index].isError = isError
+            }
         case .assistantCompleted(let message):
             messages.append(message)
             clearStreamingState()
@@ -187,6 +202,7 @@ final class ChatViewModel {
         pendingReasoning = ""
         streamingText = ""
         streamingReasoning = ""
+        toolActivity = []
     }
 
     /// First user message names the conversation (FR-6 quality-of-life).
