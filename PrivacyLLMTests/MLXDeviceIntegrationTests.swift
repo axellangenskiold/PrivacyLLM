@@ -65,6 +65,9 @@ struct MLXDeviceIntegrationTests {
         #expect((stats?.completionTokens ?? 0) > 0)
         #expect((stats?.tokensPerSecond ?? 0) > 0)
 
+        // Baseline data for Docs/PERF_BASELINES.md (TR-14).
+        print("PERF[\(spec.id)] firstToken=\(stats?.firstTokenSeconds ?? -1)s tok/s=\(stats?.tokensPerSecond ?? -1) promptTokens=\(stats?.promptTokens ?? -1) completionTokens=\(stats?.completionTokens ?? -1)")
+
         let tokenCount = await service.countTokens("hello world")
         #expect((tokenCount ?? 0) > 0)
 

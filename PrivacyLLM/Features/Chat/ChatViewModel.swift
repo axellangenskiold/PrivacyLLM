@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 @Observable
 final class ChatViewModel {
@@ -49,14 +50,22 @@ final class ChatViewModel {
         phase == .idle && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// True once preferences reflect either stored values or a user action;
+    /// guards against a late load clobbering a fast user toggle.
+    private var preferencesResolved = false
+
     func loadMessages() async {
         messages = (try? await environment.messageStore.fetchAll(conversationID: conversation.id)) ?? []
-        activeRole = (try? await environment.settingsStore.value(for: .activeRole, default: ModelRole.fast)) ?? .fast
-        searchEnabled = (try? await environment.settingsStore.searchEnabled()) ?? false
+        if !preferencesResolved {
+            activeRole = (try? await environment.settingsStore.value(for: .activeRole, default: ModelRole.fast)) ?? .fast
+            searchEnabled = (try? await environment.settingsStore.searchEnabled()) ?? false
+            preferencesResolved = true
+        }
     }
 
     /// Flips the global search opt-in (FR-18); takes effect on the next turn.
     func setSearchEnabled(_ enabled: Bool) {
+        preferencesResolved = true
         guard enabled != searchEnabled else { return }
         searchEnabled = enabled
         let settings = environment.settingsStore
@@ -146,6 +155,7 @@ final class ChatViewModel {
 
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.
     func setActiveRole(_ role: ModelRole) {
+        preferencesResolved = true
         guard role != activeRole else { return }
         activeRole = role
         let settings = environment.settingsStore
@@ -253,6 +263,7 @@ final class ChatViewModel {
             clearStreamingState()
             phase = .idle
             Haptics.success()
+            UIAccessibility.post(notification: .announcement, argument: String(localized: "Reply finished"))
         case .turnFailed(let reason, let partial):
             if let partial { messages.append(partial) }
             clearStreamingState()

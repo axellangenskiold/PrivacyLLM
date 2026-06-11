@@ -41,6 +41,7 @@ struct AppRootView: View {
                 let coordinator = SystemEventCoordinator(inference: environment.inference)
                 coordinator.start()
                 systemEvents = coordinator
+                MetricsCollector.shared.start()
             }
         }
         .onChange(of: scenePhase) { _, phase in

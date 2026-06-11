@@ -353,8 +353,9 @@ struct ChatView: View {
             Button {
                 viewModel.setSearchEnabled(!viewModel.searchEnabled)
             } label: {
-                Image(systemName: viewModel.searchEnabled ? "globe" : "globe.slash")
+                Image(systemName: "globe")
                     .font(.system(size: 22))
+                    .symbolVariant(viewModel.searchEnabled ? .fill : .none)
                     .foregroundStyle(viewModel.searchEnabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
             }
             .padding(.bottom, 4)
