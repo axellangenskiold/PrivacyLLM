@@ -73,9 +73,31 @@ Swift · SwiftUI · on-device LLM runtime (Metal-accelerated) · PDFKit · Natur
 
 ---
 
+## Development
+
+- **Requirements:** Xcode 26.2+ (with the Metal Toolchain component:
+  `xcodebuild -downloadComponent MetalToolchain`), iOS 18.0+ deployment
+  target. Real inference requires a physical device — the iOS simulator
+  runs a mock model (MLX needs the device GPU).
+- **Build:** open `PrivacyLLM.xcodeproj` and run, or
+  `xcodebuild -scheme PrivacyLLM -destination 'platform=iOS Simulator,name=iPhone 17' -skipMacroValidation build`
+- **Tests:** unit tests run on the simulator
+  (`-only-testing PrivacyLLMTests`); UI tests use a fully mocked environment
+  (`-only-testing PrivacyLLMUITests`). The MLX integration suite runs
+  automatically when the test destination is a physical device (first run
+  downloads an ~80 MB test model).
+- **Architecture:** SwiftUI + MVVM; capability services (inference, models,
+  search, documents, voice) sit behind protocols with mock implementations;
+  GRDB/SQLite persistence with field-level AES-GCM encryption; the model
+  catalog and search providers are data-driven JSON under `PrivacyLLM/Config/`.
+- **Docs:** privacy policy, network egress audit runbook, performance
+  baselines, and the App Store checklist live in `Docs/`.
+
+---
+
 ## License
 
-Apache-2.0 *(intended; subject to confirmation)*
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 

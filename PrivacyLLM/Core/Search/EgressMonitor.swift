@@ -8,7 +8,10 @@ nonisolated protocol EgressReporting: Sendable {
 }
 
 /// Drives the live egress indicator (FR-21, PR-13) and appends each event to
-/// the local-only privacy activity log (PR-14).
+/// the local-only privacy activity log (PR-14). Explicitly MainActor: the
+/// nonisolated protocol conformance would otherwise suppress the module's
+/// MainActor default and leave mutable state unprotected.
+@MainActor
 @Observable
 final class EgressMonitor: EgressReporting {
     private(set) var activeSearchCount = 0
