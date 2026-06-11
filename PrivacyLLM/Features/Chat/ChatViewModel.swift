@@ -24,6 +24,7 @@ final class ChatViewModel {
     private(set) var phase: Phase = .idle
     private(set) var errorMessage: String?
     private(set) var activeRole: ModelRole = .fast
+    private(set) var searchEnabled = false
     var draft = ""
 
     private let environment: AppEnvironment
@@ -37,7 +38,8 @@ final class ChatViewModel {
             modelManager: environment.modelManager,
             messageStore: environment.messageStore,
             conversationStore: environment.conversationStore,
-            settingsStore: environment.settingsStore
+            settingsStore: environment.settingsStore,
+            tools: environment.chatTools
         )
     }
 
@@ -50,6 +52,15 @@ final class ChatViewModel {
     func loadMessages() async {
         messages = (try? await environment.messageStore.fetchAll(conversationID: conversation.id)) ?? []
         activeRole = (try? await environment.settingsStore.value(for: .activeRole, default: ModelRole.fast)) ?? .fast
+        searchEnabled = (try? await environment.settingsStore.searchEnabled()) ?? false
+    }
+
+    /// Flips the global search opt-in (FR-18); takes effect on the next turn.
+    func setSearchEnabled(_ enabled: Bool) {
+        guard enabled != searchEnabled else { return }
+        searchEnabled = enabled
+        let settings = environment.settingsStore
+        Task { try? await settings.set(enabled, for: .searchEnabled) }
     }
 
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.

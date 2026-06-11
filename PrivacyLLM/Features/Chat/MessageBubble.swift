@@ -20,6 +20,9 @@ struct MessageBubble: View {
                     Markdown(message.content)
                         .markdownTheme(.chat)
                         .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
+                    if !message.sources.isEmpty {
+                        SourceChips(sources: message.sources)
+                    }
                 } else {
                     Text(message.content)
                 }
@@ -76,6 +79,49 @@ struct StreamingBubble: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Assistant is replying")
         .accessibilityValue(text.isEmpty ? reasoning : text)
+    }
+}
+
+/// Attribution for search- or document-derived answers (FR-20, FR-27).
+struct SourceChips: View {
+    let sources: [SourceAttribution]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Array(sources.enumerated()), id: \.offset) { _, source in
+                    chip(for: source)
+                }
+            }
+        }
+        .accessibilityLabel("Sources")
+    }
+
+    @ViewBuilder
+    private func chip(for source: SourceAttribution) -> some View {
+        if source.kind == .web, let urlString = source.urlString, let url = URL(string: urlString) {
+            Link(destination: url) {
+                chipLabel(source, icon: "globe")
+            }
+        } else {
+            chipLabel(source, icon: "doc.text")
+        }
+    }
+
+    private func chipLabel(_ source: SourceAttribution, icon: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text(source.title)
+                .lineLimit(1)
+            if let page = source.pageNumber {
+                Text("p.\(page)")
+            }
+        }
+        .font(.caption2)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.fill.tertiary, in: Capsule())
+        .foregroundStyle(.secondary)
     }
 }
 

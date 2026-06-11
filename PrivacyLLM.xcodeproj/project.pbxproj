@@ -32,6 +32,7 @@
 		1AB686000000000000000025 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000024 /* Tokenizers */; };
 		1AB686000000000000000033 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000032 /* MarkdownUI */; };
 		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
+		1AB686000000000000000043 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000042 /* SwiftSoup */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +72,7 @@
 				1AB686000000000000000025 /* Tokenizers in Frameworks */,
 				1AB686000000000000000033 /* MarkdownUI in Frameworks */,
 				1AB686000000000000000035 /* Highlightr in Frameworks */,
+				1AB686000000000000000043 /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +141,7 @@
 				1AB686000000000000000024 /* Tokenizers */,
 				1AB686000000000000000032 /* MarkdownUI */,
 				1AB686000000000000000034 /* Highlightr */,
+				1AB686000000000000000042 /* SwiftSoup */,
 			);
 			productName = PrivacyLLM;
 			productReference = 1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */;
@@ -229,6 +232,7 @@
 				1AB686000000000000000026 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 				1AB686000000000000000031 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				1AB686000000000000000041 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1AB6855F2FD9FB03000548D4 /* Products */;
@@ -632,6 +636,14 @@
 				minimumVersion = 2.3.0;
 			};
 		};
+		1AB686000000000000000041 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.13.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -674,6 +686,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */;
 			productName = Highlightr;
+		};
+		1AB686000000000000000042 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1AB686000000000000000041 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
 		};
 /* End XCSwiftPackageProductDependency section */
 

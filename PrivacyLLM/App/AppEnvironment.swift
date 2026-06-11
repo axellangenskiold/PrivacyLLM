@@ -12,21 +12,33 @@ final class AppEnvironment {
     let search: any SearchServicing
     let documents: any DocumentServicing
     let voice: any VoiceServicing
+    let egressMonitor: EgressMonitor
 
     init(
         database: AppDatabase,
         inference: any InferenceServicing,
         modelManager: any ModelManaging,
-        search: any SearchServicing,
+        search: (any SearchServicing)? = nil,
         documents: any DocumentServicing,
         voice: any VoiceServicing
     ) {
         self.database = database
         self.inference = inference
         self.modelManager = modelManager
-        self.search = search
+        let monitor = EgressMonitor(store: EgressEventStore(database: database))
+        egressMonitor = monitor
+        self.search = search ?? ConfiguredSearchService(
+            settingsStore: SettingsStore(database: database),
+            egress: monitor
+        )
         self.documents = documents
         self.voice = voice
+    }
+
+    /// Tools available to the agent loop; the search tool reaches the network
+    /// only through the gated SearchServicing (TL-4).
+    var chatTools: [any LocalTool] {
+        [DateTimeTool(), CalculatorTool(), UnitConversionTool(), WebSearchTool(search: search)]
     }
 
     var conversationStore: ConversationStore { ConversationStore(database: database) }
@@ -69,7 +81,6 @@ final class AppEnvironment {
             database: database,
             inference: inference,
             modelManager: modelManager,
-            search: MockSearchService(),
             documents: MockDocumentService(),
             voice: MockVoiceService()
         )

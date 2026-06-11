@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "defaultProviderID": "duckduckgo",
+  "providers": [
+    {
+      "id": "duckduckgo",
+      "displayName": "DuckDuckGo",
+      "host": "html.duckduckgo.com",
+      "queryURLTemplate": "https://html.duckduckgo.com/html/?q={query}",
+      "resultSelector": "div.result",
+      "titleSelector": "a.result__a",
+      "snippetSelector": "a.result__snippet, div.result__snippet",
+      "blockedMarkers": ["anomaly-modal", "challenge-form", "captcha"]
+    },
+    {
+      "id": "mojeek",
+      "displayName": "Mojeek",
+      "host": "www.mojeek.com",
+      "queryURLTemplate": "https://www.mojeek.com/search?q={query}",
+      "resultSelector": "ul.results-standard li",
+      "titleSelector": "a.title",
+      "snippetSelector": "p.s",
+      "blockedMarkers": ["captcha"]
+    }
+  ]
+}

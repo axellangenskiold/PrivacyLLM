@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct ChatView: View {
+    private let environment: AppEnvironment
     @State private var viewModel: ChatViewModel
     @State private var thermalState = ProcessInfo.processInfo.thermalState
     @State private var editTarget: Message?
@@ -11,11 +12,15 @@ struct ChatView: View {
     @FocusState private var inputFocused: Bool
 
     init(conversation: Conversation, environment: AppEnvironment) {
+        self.environment = environment
         _viewModel = State(initialValue: ChatViewModel(conversation: conversation, environment: environment))
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            if environment.egressMonitor.isSearchInFlight {
+                EgressBadge()
+            }
             if thermalState == .serious || thermalState == .critical {
                 thermalBanner
             }
@@ -280,6 +285,16 @@ struct ChatView: View {
     private var inputBar: some View {
         @Bindable var viewModel = viewModel
         return HStack(alignment: .bottom, spacing: 8) {
+            Button {
+                viewModel.setSearchEnabled(!viewModel.searchEnabled)
+            } label: {
+                Image(systemName: viewModel.searchEnabled ? "globe" : "globe.slash")
+                    .font(.system(size: 22))
+                    .foregroundStyle(viewModel.searchEnabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            }
+            .padding(.bottom, 4)
+            .accessibilityLabel(viewModel.searchEnabled ? "Web search on" : "Web search off")
+            .accessibilityHint("Toggles whether the assistant may search the web")
             TextField("Message", text: $viewModel.draft, axis: .vertical)
                 .lineLimit(1...5)
                 .padding(.horizontal, 14)
@@ -309,6 +324,29 @@ struct ChatView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+}
+
+/// Unmistakable signal that a query is leaving the device right now
+/// (FR-21, PR-13, UX-5).
+struct EgressBadge: View {
+    @State private var pulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Label("Searching the web — your query left this device", systemImage: "arrow.up.forward.app.fill")
+            .font(.footnote.bold())
+            .foregroundStyle(.white)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(.orange)
+            .opacity(pulsing && !reduceMotion ? 0.7 : 1)
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
+                value: pulsing
+            )
+            .onAppear { pulsing = true }
+            .accessibilityAddTraits(.updatesFrequently)
     }
 }
 
