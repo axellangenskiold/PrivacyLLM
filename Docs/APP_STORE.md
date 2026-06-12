@@ -64,6 +64,25 @@ model in the Models screen.
   app fetches search results as data; no browser is exposed) — answer
   honestly based on final review guidance
 
+## Monetization (OD-12)
+
+The app is **free with no IAP**; a voluntary donations page (Settings →
+Support) presents Apple Pay directly via PassKit. Before this can work or
+ship:
+
+- [ ] Create merchant ID `merchant.com.axellangenskiold.PrivacyLLM` in the
+  developer portal and add the Apple Pay capability for it (Signing &
+  Capabilities). Until then the buttons show an "Apple Pay isn't available"
+  notice.
+- [ ] Wire a payment processor (e.g. Stripe) into
+  `ApplePayDonationCoordinator.didAuthorizePayment` — the raw PKPayment
+  token charges nobody.
+- [ ] **Review risk:** guideline 3.2.1 reserves Apple Pay donations for
+  approved nonprofits; developer "tips" are normally required to be
+  consumable IAP (3.1.1, Apple takes its commission). If review rejects the
+  PassKit flow, swap `DonateView.swift`'s coordinator for StoreKit
+  consumables ($0.99 / $1.99 / $2.99 tiers) — the page layout can stay.
+
 ## Pre-submission gates
 
 - [ ] Egress audit passed (Docs/EGRESS_AUDIT.md) — release gate (TR-19)

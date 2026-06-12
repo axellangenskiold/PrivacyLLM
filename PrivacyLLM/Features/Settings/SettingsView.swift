@@ -116,6 +116,19 @@ struct SettingsView: View {
             }
             .pvListRow()
 
+            Section {
+                NavigationLink {
+                    DonateView()
+                } label: {
+                    Label("Support PrivacyLLM", systemImage: "heart")
+                }
+            } header: {
+                Text("Support")
+            } footer: {
+                Text("The app is completely free. Donations are voluntary and unlock nothing.")
+            }
+            .pvListRow()
+
             AboutSection()
                 .pvListRow()
         }

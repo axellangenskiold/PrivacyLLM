@@ -6,6 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1AB686000000000000000003 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000002 /* GRDB */; };
+		1AB686000000000000000013 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000012 /* MLXLLM */; };
+		1AB686000000000000000015 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000014 /* MLXLMCommon */; };
+		1AB686000000000000000017 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000016 /* MLXHuggingFace */; };
+		1AB686000000000000000023 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000022 /* HuggingFace */; };
+		1AB686000000000000000025 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000024 /* Tokenizers */; };
+		1AB686000000000000000033 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000032 /* MarkdownUI */; };
+		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
+		1AB686000000000000000043 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000042 /* SwiftSoup */; };
+		1AB686000000000000000053 /* PrivacyUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000052 /* PrivacyUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1AB6856E2FD9FB05000548D4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -22,19 +35,6 @@
 			remoteInfo = PrivacyLLM;
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXBuildFile section */
-		1AB686000000000000000003 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000002 /* GRDB */; };
-		1AB686000000000000000013 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000012 /* MLXLLM */; };
-		1AB686000000000000000015 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000014 /* MLXLMCommon */; };
-		1AB686000000000000000017 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000016 /* MLXHuggingFace */; };
-		1AB686000000000000000023 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000022 /* HuggingFace */; };
-		1AB686000000000000000025 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000024 /* Tokenizers */; };
-		1AB686000000000000000033 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000032 /* MarkdownUI */; };
-		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
-		1AB686000000000000000043 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000042 /* SwiftSoup */; };
-		1AB686000000000000000053 /* PrivacyUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000052 /* PrivacyUI */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivacyLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -229,7 +229,7 @@
 			mainGroup = 1AB685552FD9FB02000548D4;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB" */,
 				1AB686000000000000000011 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				1AB686000000000000000021 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 				1AB686000000000000000026 /* XCRemoteSwiftPackageReference "swift-transformers" */,
@@ -444,7 +444,7 @@
 				DEVELOPMENT_TEAM = 5QWX246F7X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "PrivacyLLM";
+				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";
@@ -481,7 +481,7 @@
 				DEVELOPMENT_TEAM = 5QWX246F7X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "PrivacyLLM";
+				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";
@@ -593,6 +593,45 @@
 		};
 /* End XCBuildConfiguration section */
 
+/* Begin XCConfigurationList section */
+		1AB685592FD9FB02000548D4 /* Build configuration list for PBXProject "PrivacyLLM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB6857F2FD9FB05000548D4 /* Debug */,
+				1AB685802FD9FB05000548D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1AB685812FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB685822FD9FB05000548D4 /* Debug */,
+				1AB685832FD9FB05000548D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1AB685842FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLMTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB685852FD9FB05000548D4 /* Debug */,
+				1AB685862FD9FB05000548D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1AB685872FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLMUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB685882FD9FB05000548D4 /* Debug */,
+				1AB685892FD9FB05000548D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
 /* Begin XCLocalSwiftPackageReference section */
 		1AB686000000000000000051 /* XCLocalSwiftPackageReference "PrivacyUI" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -601,7 +640,7 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -662,7 +701,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		1AB686000000000000000002 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = 1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		1AB686000000000000000012 /* MLXLLM */ = {
@@ -710,45 +749,6 @@
 			productName = PrivacyUI;
 		};
 /* End XCSwiftPackageProductDependency section */
-
-/* Begin XCConfigurationList section */
-		1AB685592FD9FB02000548D4 /* Build configuration list for PBXProject "PrivacyLLM" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1AB6857F2FD9FB05000548D4 /* Debug */,
-				1AB685802FD9FB05000548D4 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1AB685812FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLM" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1AB685822FD9FB05000548D4 /* Debug */,
-				1AB685832FD9FB05000548D4 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1AB685842FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLMTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1AB685852FD9FB05000548D4 /* Debug */,
-				1AB685862FD9FB05000548D4 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1AB685872FD9FB05000548D4 /* Build configuration list for PBXNativeTarget "PrivacyLLMUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1AB685882FD9FB05000548D4 /* Debug */,
-				1AB685892FD9FB05000548D4 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-/* End XCConfigurationList section */
 	};
 	rootObject = 1AB685562FD9FB02000548D4 /* Project object */;
 }
