@@ -252,19 +252,34 @@ struct ChatView: View {
                     isPinnedToBottom = false
                 }
             }
+            // The lazy transcript's height can collapse after it grew on
+            // estimated sizes — e.g. when the streaming bubble is swapped for
+            // its persisted message and the expanded reasoning collapses. If
+            // that happens while following the tail, the viewport is left in
+            // the phantom space below the real content and the reply sits
+            // above the screen. Re-clamp to the true bottom. Height only
+            // shrinks at those discrete moments, so this cannot re-fire
+            // continuously (no render-loop risk).
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentSize.height
+            } action: { oldHeight, newHeight in
+                if newHeight < oldHeight, isPinnedToBottom, !userIsScrolling {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
             .onChange(of: viewModel.streamingText) {
-                if isPinnedToBottom { proxy.scrollTo("bottom") }
+                if isPinnedToBottom { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onChange(of: viewModel.streamingReasoning) {
-                if isPinnedToBottom { proxy.scrollTo("bottom") }
+                if isPinnedToBottom { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onChange(of: viewModel.messages.count) {
                 if isPinnedToBottom {
-                    withAnimation { proxy.scrollTo("bottom") }
+                    withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
             }
             .onChange(of: scrollToBottomTrigger) {
-                withAnimation { proxy.scrollTo("bottom") }
+                withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .overlay(alignment: .bottomTrailing) {
                 if !isPinnedToBottom {
