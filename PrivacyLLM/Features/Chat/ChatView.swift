@@ -11,6 +11,11 @@ struct ChatView: View {
     @State private var showSystemPrompt = false
     @State private var systemPromptText = ""
     @State private var showAttachImporter = false
+    /// Follows the live tail only while the user is at the bottom; scrolling
+    /// up during generation stops the auto-scroll so earlier text is readable.
+    @State private var isPinnedToBottom = true
+    @State private var userIsScrolling = false
+    @State private var scrollToBottomTrigger = 0
     @FocusState private var inputFocused: Bool
 
     init(conversation: Conversation, environment: AppEnvironment) {
@@ -216,16 +221,58 @@ struct ChatView: View {
                 .padding(.top, 8)
             }
             .scrollDismissesKeyboard(.interactively)
+            // Only user-driven scrolling away from the bottom unpins;
+            // returning to the bottom re-pins. Content growth alone must
+            // never unpin, or following would die on the first streamed token.
+            .onScrollPhaseChange { _, newPhase in
+                userIsScrolling = newPhase == .tracking || newPhase == .interacting
+            }
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.visibleRect.maxY >= geometry.contentSize.height - 60
+            } action: { _, isNearBottom in
+                if isNearBottom {
+                    isPinnedToBottom = true
+                } else if userIsScrolling {
+                    isPinnedToBottom = false
+                }
+            }
             .onChange(of: viewModel.streamingText) {
-                proxy.scrollTo("bottom")
+                if isPinnedToBottom { proxy.scrollTo("bottom") }
             }
             .onChange(of: viewModel.streamingReasoning) {
-                proxy.scrollTo("bottom")
+                if isPinnedToBottom { proxy.scrollTo("bottom") }
             }
             .onChange(of: viewModel.messages.count) {
+                if isPinnedToBottom {
+                    withAnimation { proxy.scrollTo("bottom") }
+                }
+            }
+            .onChange(of: scrollToBottomTrigger) {
                 withAnimation { proxy.scrollTo("bottom") }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if !isPinnedToBottom {
+                    jumpToBottomButton
+                }
+            }
         }
+    }
+
+    private var jumpToBottomButton: some View {
+        Button {
+            isPinnedToBottom = true
+            scrollToBottomTrigger &+= 1
+        } label: {
+            Image(systemName: "arrow.down")
+                .font(.system(size: 15, weight: .semibold))
+                .padding(10)
+                .background(.regularMaterial, in: Circle())
+                .overlay(Circle().strokeBorder(.quaternary))
+        }
+        .padding(.trailing, 16)
+        .padding(.bottom, 12)
+        .accessibilityLabel("Scroll to latest")
+        .transition(.opacity.combined(with: .scale))
     }
 
     @ViewBuilder
@@ -396,6 +443,9 @@ struct ChatView: View {
                 .accessibilityLabel("Dictate message")
             } else {
                 Button {
+                    // Sending is an explicit "follow the reply" intent.
+                    isPinnedToBottom = true
+                    scrollToBottomTrigger &+= 1
                     viewModel.send()
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")

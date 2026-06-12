@@ -37,6 +37,43 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testScrollingUpStopsAutoFollowAndJumpButtonReturns() throws {
+        let app = launchApp()
+        app.buttons["New Chat"].firstMatch.tap()
+        let input = app.textFields["Message input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+
+        // Build up enough content to scroll, then stream a third reply.
+        for index in 0..<3 {
+            input.tap()
+            input.typeText("Message number \(index)")
+            app.buttons["Send message"].tap()
+            if index < 2 {
+                XCTAssertTrue(app.buttons["Dictate message"].waitForExistence(timeout: 15))
+            }
+        }
+
+        // Scroll towards older content with raw drags (element-independent;
+        // a finger moving down reveals earlier messages).
+        let window = app.windows.firstMatch
+        for _ in 0..<2 {
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+                .press(forDuration: 0.05, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
+        }
+
+        // Auto-follow disengaged: the jump affordance appears and tapping it
+        // re-pins to the live tail (the fix for the streaming-scroll bug).
+        let jump = app.buttons["Scroll to latest"]
+        let appeared = jump.waitForExistence(timeout: 5)
+        if !appeared {
+            add(XCTAttachment(screenshot: app.screenshot()))
+        }
+        XCTAssertTrue(appeared)
+        jump.tap()
+        XCTAssertTrue(jump.waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
     func testFastThinkingToggleSticks() throws {
         let app = launchApp()
         app.buttons["New Chat"].firstMatch.tap()
