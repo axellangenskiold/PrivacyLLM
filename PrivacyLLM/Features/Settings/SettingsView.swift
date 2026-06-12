@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 
 struct SettingsView: View {
@@ -37,11 +38,13 @@ struct SettingsView: View {
             } footer: {
                 Text("Search is off by default. When on, only short keyword queries are sent to the provider you choose — never your conversations.")
             }
+            .pvListRow()
 
             Section("Persona") {
                 TextField("Global system prompt", text: $viewModel.globalSystemPrompt, axis: .vertical)
                     .lineLimit(2...6)
             }
+            .pvListRow()
 
             Section {
                 if !viewModel.downloadedModels.isEmpty {
@@ -91,6 +94,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Higher temperature means more varied replies. Longer context remembers more but uses more memory.")
             }
+            .pvListRow()
 
             Section("Appearance") {
                 Picker("Theme", selection: $viewModel.appearance) {
@@ -99,6 +103,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .pvListRow()
 
             Section {
                 Button("Clear All Conversations", role: .destructive) { confirmClearChats = true }
@@ -109,9 +114,13 @@ struct SettingsView: View {
             } footer: {
                 Text("Downloaded models are managed in the Models screen.")
             }
+            .pvListRow()
 
             AboutSection()
+                .pvListRow()
         }
+        .scrollContentBackground(.hidden)
+        .pvScreen()
         .navigationTitle("Settings")
         .task {
             if !viewModel.loaded { await viewModel.load() }
@@ -156,11 +165,12 @@ struct PrivacyExplainerView: View {
             Section {
                 explainerRow(
                     icon: "iphone",
-                    tint: .green,
+                    tint: .pvAccent,
                     title: "Stays on this iPhone",
                     detail: "Your messages, the model's replies and reasoning, your documents and their search index, settings, and the privacy activity log. All of it is stored encrypted and never transmitted."
                 )
             }
+            .pvListRow()
             Section {
                 explainerRow(
                     icon: "square.and.arrow.down",
@@ -170,7 +180,7 @@ struct PrivacyExplainerView: View {
                 )
                 explainerRow(
                     icon: "magnifyingglass",
-                    tint: .orange,
+                    tint: .pvWarning,
                     title: "Web search (only when you turn it on)",
                     detail: "With search on, the assistant can send short keyword queries to your chosen search provider. The orange banner appears every time this happens, and each query is listed in Privacy Activity. Your conversation text is never sent."
                 )
@@ -183,12 +193,16 @@ struct PrivacyExplainerView: View {
             } header: {
                 Text("The only network activity")
             }
+            .pvListRow()
             Section {
                 Text("There are no analytics, no tracking, no accounts, and no servers of ours. In airplane mode, everything except web search keeps working.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pvTextSecondary)
             }
+            .pvListRow()
         }
+        .scrollContentBackground(.hidden)
+        .pvScreen()
         .navigationTitle("What leaves this device")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -199,10 +213,12 @@ struct PrivacyExplainerView: View {
                 .foregroundStyle(tint)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline)
+                Text(title)
+                    .font(PVFont.headline)
+                    .foregroundStyle(Color.pvTextPrimary)
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pvTextSecondary)
             }
         }
         .padding(.vertical, 4)
@@ -216,27 +232,33 @@ struct PrivacyActivityView: View {
     var body: some View {
         List {
             if viewModel.recentEgressEvents.isEmpty {
-                ContentUnavailableView {
-                    Label("Nothing has left this device", systemImage: "checkmark.shield")
-                } description: {
-                    Text("Search queries and model downloads will be listed here when they happen.")
-                }
+                PVEmptyState(
+                    icon: "checkmark.shield",
+                    title: "Nothing has left this device",
+                    message: "Search queries and model downloads will be listed here when they happen."
+                )
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(viewModel.recentEgressEvents) { event in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: event.kind == .webSearch ? "magnifyingglass" : "square.and.arrow.down")
-                            .foregroundStyle(event.kind == .webSearch ? .orange : .blue)
+                            .foregroundStyle(event.kind == .webSearch ? Color.pvWarning : Color.pvAccent)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(event.detail)
                                 .font(.subheadline)
+                                .foregroundStyle(Color.pvTextPrimary)
                             Text("\(event.destinationHost) · \(event.occurredAt.formatted(date: .abbreviated, time: .shortened))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(PVFont.metaSmall)
+                                .foregroundStyle(Color.pvTextSecondary)
                         }
                     }
+                    .pvListRow()
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .pvScreen()
         .navigationTitle("Privacy Activity")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -279,7 +301,10 @@ private struct AboutSection: View {
                     } footer: {
                         Text("Model licenses are shown per model in the Models screen.")
                     }
+                    .pvListRow()
                 }
+                .scrollContentBackground(.hidden)
+                .pvScreen()
                 .navigationTitle("Licenses")
                 .navigationBarTitleDisplayMode(.inline)
             }

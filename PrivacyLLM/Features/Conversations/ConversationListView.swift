@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 
 nonisolated enum AppRoute: Hashable {
@@ -84,20 +85,25 @@ struct ConversationListView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.conversations.isEmpty {
-            ContentUnavailableView {
-                Label("No chats yet", systemImage: "bubble.left.and.bubble.right")
-            } description: {
-                Text("Start a private conversation that never leaves your device.")
-            } actions: {
+            VStack(spacing: 0) {
+                PVEmptyState(
+                    icon: "bubble.left.and.bubble.right",
+                    title: "No chats yet",
+                    message: "Start a private conversation that never leaves your device."
+                )
                 Button("New Chat") { createAndOpen() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.pvPrimary)
+                    .padding(.horizontal, 48)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .pvScreen()
         } else {
             List {
                 ForEach(viewModel.conversations) { conversation in
                     NavigationLink(value: AppRoute.chat(conversation)) {
                         row(for: conversation)
                     }
+                    .pvListRow()
                     .swipeActions {
                         Button(role: .destructive) {
                             Task { await viewModel.delete(conversation) }
@@ -120,18 +126,22 @@ struct ConversationListView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .pvScreen()
         }
     }
 
     private func row(for conversation: Conversation) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(conversation.title)
+                .font(PVFont.headline)
+                .foregroundStyle(Color.pvTextPrimary)
                 .lineLimit(1)
             Text(conversation.updatedAt, format: .relative(presentation: .named))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvTextSecondary)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
     private var renamePresented: Binding<Bool> {

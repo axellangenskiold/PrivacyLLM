@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -14,31 +15,40 @@ struct DocumentsView: View {
     var body: some View {
         Group {
             if viewModel.documents.isEmpty, !viewModel.isImporting {
-                ContentUnavailableView {
-                    Label("No documents", systemImage: "doc.text.magnifyingglass")
-                } description: {
-                    Text("Import a PDF and ask questions about it. Documents are indexed and stored entirely on this device.")
-                } actions: {
+                VStack(spacing: 0) {
+                    PVEmptyState(
+                        icon: "doc.text.magnifyingglass",
+                        title: "No documents",
+                        message: "Import a PDF and ask questions about it. Documents are indexed and stored entirely on this device."
+                    )
                     Button("Import PDF") { showImporter = true }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.pvPrimary)
+                        .padding(.horizontal, 48)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .pvScreen()
             } else {
                 List {
                     if viewModel.isImporting {
                         HStack(spacing: 10) {
                             ProgressView()
-                            Text("Indexing… this stays on your device.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                            Text("indexing… this stays on your device")
+                                .font(PVFont.meta)
+                                .foregroundStyle(Color.pvTextSecondary)
                         }
+                        .pvListRow()
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Indexing… this stays on your device.")
                     }
                     if let error = viewModel.errorMessage {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.pvWarning)
+                            .pvListRow()
                     }
                     ForEach(viewModel.documents) { document in
                         row(for: document)
+                            .pvListRow()
                             .swipeActions {
                                 Button(role: .destructive) {
                                     Task { await viewModel.delete(document) }
@@ -48,6 +58,8 @@ struct DocumentsView: View {
                             }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .pvScreen()
             }
         }
         .navigationTitle("Documents")
@@ -72,12 +84,13 @@ struct DocumentsView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(document.title)
-                    .font(.headline)
+                    .font(PVFont.headline)
+                    .foregroundStyle(Color.pvTextPrimary)
                     .lineLimit(1)
                 if case .conversation = document.scope {
                     Image(systemName: "bubble.left")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.pvTextSecondary)
                         .accessibilityLabel("Attached to one chat")
                 }
             }
@@ -85,8 +98,8 @@ struct DocumentsView: View {
                 Text("\(document.pageCount) pages · \(ByteCountFormatter.string(fromByteCount: document.byteSize, countStyle: .file))")
                 stateBadge(for: document.indexState)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(PVFont.metaSmall)
+            .foregroundStyle(Color.pvTextSecondary)
         }
         .padding(.vertical, 2)
     }
@@ -96,12 +109,12 @@ struct DocumentsView: View {
         switch state {
         case .ready:
             Label("Indexed", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.pvAccent)
         case .indexing, .pending:
             Label("Indexing…", systemImage: "clock")
         case .failed:
             Label("Failed", systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.pvWarning)
         }
     }
 }

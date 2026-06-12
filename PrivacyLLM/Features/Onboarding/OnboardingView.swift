@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 
 /// First-run flow (UX-2): privacy promise → first model download with size and
@@ -23,8 +24,19 @@ struct OnboardingView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .pvScreen()
         .task { modelsViewModel.start() }
         .onDisappear { modelsViewModel.stopObserving() }
+    }
+
+    /// The vault hero: a glowing icon tile shared by all three pages.
+    private func heroTile(_ systemImage: String, size: CGFloat = 34) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size, weight: .medium))
+            .foregroundStyle(Color.pvAccent)
+            .frame(width: 84, height: 84)
+            .background(Color.pvAccentWash, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .pvGlow()
     }
 
     // MARK: Page 1 — privacy promise
@@ -32,26 +44,25 @@ struct OnboardingView: View {
     private var privacyPage: some View {
         VStack(spacing: 24) {
             Spacer()
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.tint)
+            heroTile("lock.shield.fill")
             Text("Private by design")
-                .font(.largeTitle.bold())
+                .font(PVFont.display)
+                .foregroundStyle(Color.pvTextPrimary)
             VStack(alignment: .leading, spacing: 16) {
                 promiseRow(icon: "iphone", title: "Runs on this iPhone", detail: "The AI model lives and thinks on your device. Your chats are never sent to a server.")
                 promiseRow(icon: "lock.fill", title: "Encrypted on device", detail: "Conversations and documents are stored encrypted, readable only here.")
                 promiseRow(icon: "eye.slash.fill", title: "Nothing leaves silently", detail: "Only two things ever use the network: downloading a model, and web search — which is off until you turn it on, and always visible when it runs.")
             }
+            .padding(PVSpacing.l)
+            .pvCard()
             .padding(.horizontal, 28)
             Spacer()
             Button {
                 withAnimation { page = 1 }
             } label: {
                 Text("Continue")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.pvPrimary)
             .padding(.horizontal, 28)
             .padding(.bottom, 48)
         }
@@ -61,13 +72,15 @@ struct OnboardingView: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundStyle(.tint)
+                .foregroundStyle(Color.pvAccent)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
+                Text(title)
+                    .font(PVFont.headline)
+                    .foregroundStyle(Color.pvTextPrimary)
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pvTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -82,14 +95,13 @@ struct OnboardingView: View {
     private var modelPage: some View {
         VStack(spacing: 16) {
             Spacer(minLength: 24)
-            Image(systemName: "square.and.arrow.down")
-                .font(.system(size: 48))
-                .foregroundStyle(.tint)
+            heroTile("square.and.arrow.down", size: 30)
             Text("Pick your model")
-                .font(.largeTitle.bold())
+                .font(PVFont.display)
+                .foregroundStyle(Color.pvTextPrimary)
             Text("Models download once, directly from Hugging Face, then work fully offline. Wi-Fi is recommended.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.pvTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
@@ -102,6 +114,7 @@ struct OnboardingView: View {
                         onPause: { modelsViewModel.pause(state.id) },
                         onResume: { modelsViewModel.resume(state.id) }
                     )
+                    .pvListRow()
                 }
             }
             .listStyle(.insetGrouped)
@@ -111,11 +124,10 @@ struct OnboardingView: View {
                 withAnimation { page = 2 }
             } label: {
                 Text(hasDownloadedModel ? "Continue" : "Waiting for a model…")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.pvPrimary)
             .disabled(!hasDownloadedModel)
+            .opacity(hasDownloadedModel ? 1 : 0.5)
             .padding(.horizontal, 28)
             .padding(.bottom, 48)
         }
@@ -126,14 +138,13 @@ struct OnboardingView: View {
     private var voicePage: some View {
         VStack(spacing: 24) {
             Spacer()
-            Image(systemName: "mic.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
+            heroTile("mic.fill")
             Text("Speak, privately")
-                .font(.largeTitle.bold())
+                .font(PVFont.display)
+                .foregroundStyle(Color.pvTextPrimary)
             Text("Tap the mic to dictate messages. Speech is transcribed by iOS on this device — audio never leaves your iPhone. You'll be asked for microphone permission the first time you use it.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.pvTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             Spacer()
@@ -141,10 +152,8 @@ struct OnboardingView: View {
                 onComplete()
             } label: {
                 Text("Start chatting")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.pvPrimary)
             .padding(.horizontal, 28)
             .padding(.bottom, 48)
         }
@@ -162,27 +171,28 @@ private struct OnboardingModelRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(state.spec.displayName)
-                    .font(.headline)
+                    .font(PVFont.headline)
+                    .foregroundStyle(Color.pvTextPrimary)
                 if isRecommended {
                     Text("RECOMMENDED")
-                        .font(.caption2.bold())
+                        .font(PVFont.metaSmall.weight(.heavy))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(.tint.opacity(0.15), in: Capsule())
-                        .foregroundStyle(.tint)
+                        .background(Color.pvAccentWash, in: Capsule())
+                        .foregroundStyle(Color.pvAccent)
                 }
                 Spacer()
                 control
             }
             Text("\(state.spec.parameterCount) · \(ByteCountFormatter.string(fromByteCount: state.spec.sizeBytes, countStyle: .file)) · \(state.spec.licenseName)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvTextSecondary)
             if case .downloading(let progress) = state.phase {
                 ProgressView(value: progress)
             } else if case .paused(let progress) = state.phase {
                 ProgressView(value: progress).tint(.secondary)
             } else if case .failed(let reason) = state.phase {
-                Text(reason).font(.caption2).foregroundStyle(.orange)
+                Text(reason).font(PVFont.metaSmall).foregroundStyle(Color.pvWarning)
             }
         }
         .padding(.vertical, 2)
@@ -193,8 +203,7 @@ private struct OnboardingModelRow: View {
         switch state.phase {
         case .notDownloaded:
             Button("Get", action: onDownload)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.pvCompact)
         case .downloading:
             Button(action: onPause) {
                 Image(systemName: "pause.circle.fill").font(.title3)
@@ -208,11 +217,10 @@ private struct OnboardingModelRow: View {
         case .downloaded:
             Image(systemName: "checkmark.circle.fill")
                 .font(.title3)
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.pvAccent)
         case .failed:
             Button("Retry", action: onDownload)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.pvCompact)
         }
     }
 }

@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 
 /// App shell: routes first launches into onboarding, then the conversation
@@ -12,7 +13,7 @@ struct AppRootView: View {
         Group {
             switch needsOnboarding {
             case .none:
-                Color.clear
+                PVScreenBackground()
             case .some(true):
                 OnboardingView(environment: environment) {
                     completeOnboarding()
@@ -21,6 +22,7 @@ struct AppRootView: View {
                 ConversationListView(environment: environment)
             }
         }
+        .tint(Color.pvAccent)
         .task {
             if needsOnboarding == nil {
                 if ProcessInfo.processInfo.arguments.contains("--skip-onboarding") {

@@ -1,3 +1,4 @@
+import PrivacyUI
 import SwiftUI
 
 struct ModelManagerView: View {
@@ -30,7 +31,10 @@ struct ModelManagerView: View {
             } footer: {
                 Text("Weights download directly from Hugging Face over Wi-Fi if possible, and never leave this device afterwards. \(storageFooter)")
             }
+            .pvListRow()
         }
+        .scrollContentBackground(.hidden)
+        .pvScreen()
         .navigationTitle("Models")
         .task { viewModel.start() }
         .onDisappear { viewModel.stopObserving() }
@@ -89,23 +93,24 @@ private struct ModelRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(state.spec.displayName)
-                    .font(.headline)
+                    .font(PVFont.headline)
+                    .foregroundStyle(Color.pvTextPrimary)
                 if isActiveFast { roleBadge("FAST") }
                 if isActiveThinking { roleBadge("THINKING") }
                 Spacer()
                 trailingControl
             }
             Text("\(state.spec.parameterCount) · \(state.spec.quantization) · \(ByteCountFormatter.string(fromByteCount: state.spec.sizeBytes, countStyle: .file))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvTextSecondary)
             HStack(spacing: 8) {
                 Label("\(state.spec.minRAMGB) GB RAM", systemImage: exceedsRAM ? "exclamationmark.triangle.fill" : "memorychip")
-                    .font(.caption)
-                    .foregroundStyle(exceedsRAM ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                    .font(PVFont.metaSmall)
+                    .foregroundStyle(exceedsRAM ? Color.pvWarning : Color.pvTextSecondary)
                 if let url = URL(string: state.spec.licenseURLString) {
                     Link(destination: url) {
                         Label(state.spec.licenseName, systemImage: "doc.text")
-                            .font(.caption)
+                            .font(PVFont.metaSmall)
                     }
                 }
             }
@@ -116,11 +121,11 @@ private struct ModelRow: View {
 
     private func roleBadge(_ text: String) -> some View {
         Text(text)
-            .font(.caption2.bold())
+            .font(PVFont.metaSmall.weight(.heavy))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(.tint.opacity(0.15), in: Capsule())
-            .foregroundStyle(.tint)
+            .background(Color.pvAccentWash, in: Capsule())
+            .foregroundStyle(Color.pvAccent)
     }
 
     @ViewBuilder
@@ -128,9 +133,7 @@ private struct ModelRow: View {
         switch state.phase {
         case .notDownloaded:
             Button("Get", action: onDownload)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .font(.subheadline.bold())
+                .buttonStyle(.pvCompact)
         case .downloading:
             Button(action: onPause) {
                 Image(systemName: "pause.circle.fill")
@@ -170,14 +173,12 @@ private struct ModelRow: View {
             } label: {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.pvAccent)
             }
             .accessibilityLabel("Downloaded. Model options")
         case .failed:
             Button("Retry", action: onDownload)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .font(.subheadline.bold())
+                .buttonStyle(.pvCompact)
         }
     }
 
@@ -189,24 +190,24 @@ private struct ModelRow: View {
                 EmptyView()
             } currentValueLabel: {
                 Text("\(Int(progress * 100))% downloaded")
-                    .font(.caption2)
+                    .font(PVFont.metaSmall)
             }
         case .paused(let progress):
             ProgressView(value: progress) {
                 EmptyView()
             } currentValueLabel: {
                 Text("Paused at \(Int(progress * 100))%")
-                    .font(.caption2)
+                    .font(PVFont.metaSmall)
             }
             .tint(.secondary)
         case .verifying:
             Text("Verifying integrity…")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvTextSecondary)
         case .failed(let reason):
             Text(reason)
-                .font(.caption2)
-                .foregroundStyle(.orange)
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvWarning)
         default:
             EmptyView()
         }

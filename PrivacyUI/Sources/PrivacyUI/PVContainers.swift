@@ -137,7 +137,8 @@ public struct PVEmptyState: View {
             }
         }
         .padding(PVSpacing.xl)
-        .accessibilityElement(children: .combine)
+        // Title and message stay separate accessibility elements so they can
+        // be queried by label (UI tests) and read in order by VoiceOver.
     }
 }
 
