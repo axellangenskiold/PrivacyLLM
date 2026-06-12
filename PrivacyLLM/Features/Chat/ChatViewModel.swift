@@ -26,6 +26,8 @@ final class ChatViewModel {
     private(set) var errorMessage: String?
     private(set) var activeRole: ModelRole = .fast
     private(set) var searchEnabled = false
+    private(set) var downloadedModels: [ModelSpec] = []
+    private(set) var activeModelID: String?
     var draft = ""
 
     private let environment: AppEnvironment
@@ -61,6 +63,24 @@ final class ChatViewModel {
             searchEnabled = (try? await environment.settingsStore.searchEnabled()) ?? false
             preferencesResolved = true
         }
+        await refreshModelOptions()
+    }
+
+    /// Downloaded models offered by the chat toolbar picker, plus which one the
+    /// current role resolves to. Selection applies on the next turn (FR-15).
+    func refreshModelOptions() async {
+        let manager = environment.modelManager
+        let states = await manager.states()
+        downloadedModels = states.filter { $0.phase == .downloaded }.map(\.spec)
+        activeModelID = await manager.activeModelID(for: activeRole)
+    }
+
+    func setActiveModel(_ id: String) {
+        guard id != activeModelID else { return }
+        activeModelID = id
+        let manager = environment.modelManager
+        let role = activeRole
+        Task { await manager.setActiveModel(id, for: role) }
     }
 
     /// Flips the global search opt-in (FR-18); takes effect on the next turn.
@@ -169,7 +189,11 @@ final class ChatViewModel {
         guard role != activeRole else { return }
         activeRole = role
         let settings = environment.settingsStore
-        Task { try? await settings.set(role, for: .activeRole) }
+        let manager = environment.modelManager
+        Task {
+            try? await settings.set(role, for: .activeRole)
+            activeModelID = await manager.activeModelID(for: role)
+        }
     }
 
     func send() {

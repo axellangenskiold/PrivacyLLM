@@ -51,6 +51,25 @@ struct ChatView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Section("Model for \(viewModel.activeRole == .fast ? "Fast" : "Thinking")") {
+                        if viewModel.downloadedModels.isEmpty {
+                            Text("No models downloaded yet")
+                        } else {
+                            Picker("Model", selection: activeModelBinding) {
+                                ForEach(viewModel.downloadedModels) { spec in
+                                    Text(spec.displayName).tag(spec.id as String?)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "cpu")
+                }
+                .accessibilityLabel("Choose model")
+                .accessibilityHint("Picks which downloaded model answers in \(viewModel.activeRole == .fast ? "Fast" : "Thinking") mode")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
                     Button {
                         systemPromptText = viewModel.conversation.systemPrompt ?? ""
                         showSystemPrompt = true
@@ -99,6 +118,13 @@ struct ChatView: View {
         Binding(
             get: { viewModel.activeRole },
             set: { viewModel.setActiveRole($0) }
+        )
+    }
+
+    private var activeModelBinding: Binding<String?> {
+        Binding(
+            get: { viewModel.activeModelID },
+            set: { if let id = $0 { viewModel.setActiveModel(id) } }
         )
     }
 

@@ -88,6 +88,23 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testChatModelPickerListsDownloadedModels() throws {
+        let app = launchApp()
+        app.buttons["New Chat"].firstMatch.tap()
+
+        let picker = app.buttons["Choose model"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        picker.tap()
+
+        // The mock environment pre-downloads only the fast model; it's offered
+        // (and already selected) for the current role.
+        let model = app.buttons["Mock Fast 1B"]
+        XCTAssertTrue(model.waitForExistence(timeout: 5))
+        model.tap()
+        XCTAssertTrue(app.textFields["Message input"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSearchToggleFlipsState() throws {
         let app = launchApp()
         app.buttons["New Chat"].firstMatch.tap()
