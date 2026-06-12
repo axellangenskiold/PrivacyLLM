@@ -54,16 +54,16 @@ nonisolated struct HuggingFaceAPI: Sendable {
         URL(string: "https://\(Self.host)/\(repo)/resolve/\(revision)/\(path)")!
     }
 
-    private struct TreeEntry: Decodable {
-        struct LFS: Decodable {
-            var oid: String
-            var size: Int64
-        }
+    private struct TreeEntryLFS: Decodable {
+        var oid: String
+        var size: Int64
+    }
 
+    private struct TreeEntry: Decodable {
         var type: String
         var path: String
         var size: Int64?
         var oid: String?
-        var lfs: LFS?
+        var lfs: TreeEntryLFS?
     }
 }
