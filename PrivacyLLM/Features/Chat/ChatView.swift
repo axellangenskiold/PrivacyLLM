@@ -1,4 +1,5 @@
 import Combine
+import PrivacyUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -26,25 +27,27 @@ struct ChatView: View {
     var body: some View {
         VStack(spacing: 0) {
             if environment.egressMonitor.isSearchInFlight {
-                EgressBadge()
+                PVBanner(.egress, icon: "arrow.up.forward.app.fill", text: "Searching the web — your query left this device")
             }
             if thermalState == .serious || thermalState == .critical {
-                thermalBanner
+                PVBanner(.warning, icon: "thermometer.high", text: "Device is warm — Fast mode is recommended")
             }
             messageList
             inputBar
         }
+        .pvScreen()
         .navigationTitle(viewModel.conversation.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("Mode", selection: roleBinding) {
-                    Text("Fast").tag(ModelRole.fast)
-                    Text("Thinking").tag(ModelRole.thinking)
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 200)
-                .accessibilityLabel("Model mode")
+                PVSegmentedPill(
+                    selection: roleBinding,
+                    accessibilityLabel: "Model mode",
+                    options: [
+                        .init(ModelRole.fast, label: "Fast"),
+                        .init(ModelRole.thinking, label: "Thinking"),
+                    ]
+                )
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -97,14 +100,6 @@ struct ChatView: View {
             get: { viewModel.activeRole },
             set: { viewModel.setActiveRole($0) }
         )
-    }
-
-    private var thermalBanner: some View {
-        Label("Device is warm — Fast mode is recommended", systemImage: "thermometer.high")
-            .font(.footnote)
-            .padding(8)
-            .frame(maxWidth: .infinity)
-            .background(.orange.opacity(0.15))
     }
 
     private func editSheet(for message: Message) -> some View {
@@ -259,15 +254,9 @@ struct ChatView: View {
     }
 
     private var jumpToBottomButton: some View {
-        Button {
+        PVIconButton("arrow.down", style: .surface, size: 15) {
             isPinnedToBottom = true
             scrollToBottomTrigger &+= 1
-        } label: {
-            Image(systemName: "arrow.down")
-                .font(.system(size: 15, weight: .semibold))
-                .padding(10)
-                .background(.regularMaterial, in: Circle())
-                .overlay(Circle().strokeBorder(.quaternary))
         }
         .padding(.trailing, 16)
         .padding(.bottom, 12)
@@ -286,21 +275,25 @@ struct ChatView: View {
             HStack(spacing: 10) {
                 ProgressView(value: progress)
                     .frame(maxWidth: 160)
-                Text("Loading model…")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .tint(Color.pvAccent)
+                Text("loading model…")
+                    .font(PVFont.meta)
+                    .foregroundStyle(Color.pvTextSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
+            .accessibilityLabel("Loading model…")
         } else if viewModel.phase == .generating {
             HStack(spacing: 8) {
                 ProgressView()
-                Text("Thinking…")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .tint(Color.pvAccent)
+                Text("thinking…")
+                    .font(PVFont.meta)
+                    .foregroundStyle(Color.pvTextSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
+            .accessibilityLabel("Thinking…")
         }
     }
 
@@ -311,12 +304,12 @@ struct ChatView: View {
                     .controlSize(.small)
             } else {
                 Image(systemName: activity.isError ? "xmark.circle" : "checkmark.circle")
-                    .foregroundStyle(activity.isError ? .orange : .green)
+                    .foregroundStyle(activity.isError ? Color.pvWarning : Color.pvAccent)
                     .font(.footnote)
             }
             Text(Self.toolDisplayName(activity.name))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(PVFont.meta)
+                .foregroundStyle(Color.pvTextSecondary)
             Spacer()
         }
         .accessibilityElement(children: .combine)
@@ -333,94 +326,77 @@ struct ChatView: View {
     }
 
     private var emptyHint: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 40))
-                .foregroundStyle(.tint)
-            Text("Private chat")
-                .font(.headline)
-            Text("Everything here is generated and stored on this device.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
+        PVEmptyState(
+            icon: "lock.shield",
+            title: "Private chat",
+            message: "Everything here is generated and stored on this device."
+        )
     }
 
     /// Clear guidance when mic/speech permission is denied (FR-35).
     private var voicePermissionRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Microphone access is off", systemImage: "mic.slash.fill")
-                .font(.footnote.bold())
+                .font(PVFont.headline)
+                .foregroundStyle(Color.pvTextPrimary)
             Text("To dictate messages, allow microphone and speech recognition in Settings. Everything is transcribed on this device.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.pvTextSecondary)
             HStack {
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 }
-                .font(.footnote.bold())
+                .buttonStyle(.pvCompact)
                 Button("Dismiss") { viewModel.dismissVoicePermissionHelp() }
                     .font(.footnote)
+                    .foregroundStyle(Color.pvTextSecondary)
             }
         }
-        .padding(12)
+        .padding(PVSpacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+        .pvCard()
     }
 
     private func errorRow(_ text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.pvWarning)
             Text(text)
                 .font(.footnote)
+                .foregroundStyle(Color.pvTextPrimary)
             Spacer()
             Button("Dismiss") { viewModel.dismissError() }
                 .font(.footnote.bold())
+                .foregroundStyle(Color.pvAccent)
         }
-        .padding(10)
-        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        .padding(PVSpacing.m)
+        .pvCard()
     }
 
     private var inputBar: some View {
         @Bindable var viewModel = viewModel
-        return HStack(alignment: .bottom, spacing: 8) {
-            Button {
+        return HStack(alignment: .bottom, spacing: 6) {
+            PVIconButton("paperclip", size: 18) {
                 showAttachImporter = true
-            } label: {
-                Image(systemName: "paperclip")
-                    .font(.system(size: 21))
-                    .foregroundStyle(.secondary)
             }
-            .padding(.bottom, 5)
             .accessibilityLabel("Attach a PDF to this chat")
-            Button {
-                viewModel.setSearchEnabled(!viewModel.searchEnabled)
-            } label: {
-                Image(systemName: "globe")
-                    .font(.system(size: 22))
-                    .symbolVariant(viewModel.searchEnabled ? .fill : .none)
-                    .foregroundStyle(viewModel.searchEnabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-            }
-            .padding(.bottom, 4)
-            .accessibilityLabel(viewModel.searchEnabled ? "Web search on" : "Web search off")
-            .accessibilityHint("Toggles whether the assistant may search the web")
+            searchToggleButton
             TextField("Message", text: $viewModel.draft, axis: .vertical)
                 .lineLimit(1...5)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+                .background(Color.pvSurface, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 21, style: .continuous)
+                        .strokeBorder(Color.pvHairline, lineWidth: 1)
+                )
                 .focused($inputFocused)
                 .accessibilityLabel("Message input")
             if viewModel.isBusy {
-                Button {
+                PVIconButton("stop.fill", style: .alert, size: 16) {
                     viewModel.stop()
-                } label: {
-                    Image(systemName: "stop.circle.fill")
-                        .font(.system(size: 30))
                 }
                 .accessibilityLabel("Stop generating")
             } else if viewModel.isRecording {
@@ -428,59 +404,57 @@ struct ChatView: View {
                     viewModel.toggleRecording()
                 } label: {
                     Image(systemName: "mic.badge.xmark")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.red)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.pvDanger)
                         .symbolEffect(.pulse, options: .repeating)
+                        .frame(width: 34, height: 34)
+                        .background(Color.pvDanger.opacity(0.15), in: Circle())
                 }
                 .accessibilityLabel("Stop dictation")
             } else if viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
+                PVIconButton("mic.fill", style: .surface, size: 16) {
                     viewModel.toggleRecording()
-                } label: {
-                    Image(systemName: "mic.circle.fill")
-                        .font(.system(size: 30))
                 }
                 .accessibilityLabel("Dictate message")
             } else {
-                Button {
+                PVIconButton("arrow.up", style: .filled, size: 16) {
                     // Sending is an explicit "follow the reply" intent.
                     isPinnedToBottom = true
                     scrollToBottomTrigger &+= 1
                     viewModel.send()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
                 }
                 .disabled(!viewModel.canSend)
                 .accessibilityLabel("Send message")
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(.bar)
+        .background(
+            Color.pvBackground
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color.pvHairline).frame(height: 1)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
-}
 
-/// Unmistakable signal that a query is leaving the device right now
-/// (FR-21, PR-13, UX-5).
-struct EgressBadge: View {
-    @State private var pulsing = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Label("Searching the web — your query left this device", systemImage: "arrow.up.forward.app.fill")
-            .font(.footnote.bold())
-            .foregroundStyle(.white)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity)
-            .background(.orange)
-            .opacity(pulsing && !reduceMotion ? 0.7 : 1)
-            .animation(
-                reduceMotion ? nil : .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
-                value: pulsing
-            )
-            .onAppear { pulsing = true }
-            .accessibilityAddTraits(.updatesFrequently)
+    /// The globe keeps its tap-to-toggle behavior; the corner badge makes the
+    /// state unmistakable (green ON / red OFF).
+    private var searchToggleButton: some View {
+        Button {
+            viewModel.setSearchEnabled(!viewModel.searchEnabled)
+        } label: {
+            Image(systemName: "globe")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(viewModel.searchEnabled ? Color.pvAccent : Color.pvTextSecondary)
+                .frame(width: 34, height: 34)
+                .overlay(alignment: .topTrailing) {
+                    PVStatusBadge(viewModel.searchEnabled ? .on : .off)
+                        .offset(x: 7, y: -2)
+                }
+        }
+        .accessibilityLabel(viewModel.searchEnabled ? "Web search on" : "Web search off")
+        .accessibilityHint("Toggles whether the assistant may search the web")
     }
 }
 

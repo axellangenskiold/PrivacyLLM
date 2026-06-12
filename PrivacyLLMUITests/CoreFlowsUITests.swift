@@ -78,7 +78,8 @@ final class CoreFlowsUITests: XCTestCase {
         let app = launchApp()
         app.buttons["New Chat"].firstMatch.tap()
 
-        let mode = app.segmentedControls["Model mode"]
+        // PVSegmentedPill is an accessibility container, not a native segmented control.
+        let mode = app.otherElements["Model mode"]
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
         mode.buttons["Thinking"].tap()
         XCTAssertTrue(mode.buttons["Thinking"].isSelected)

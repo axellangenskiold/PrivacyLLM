@@ -1,5 +1,6 @@
 import Highlightr
 import MarkdownUI
+import PrivacyUI
 import SwiftUI
 
 /// Markdown theme for assistant bubbles (FR-5): tightened spacing, fenced code
@@ -9,7 +10,7 @@ extension MarkdownUI.Theme {
         .code {
             FontFamilyVariant(.monospaced)
             FontSize(.em(0.88))
-            BackgroundColor(Color(.secondarySystemFill))
+            BackgroundColor(Color.pvSurfaceRaised)
         }
         .codeBlock { configuration in
             ChatCodeBlock(configuration: configuration)
@@ -24,8 +25,8 @@ struct ChatCodeBlock: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(configuration.language ?? "code")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(PVFont.metaSmall)
+                    .foregroundStyle(Color.pvTextSecondary)
                 Spacer()
                 Button {
                     UIPasteboard.general.string = configuration.content
@@ -36,14 +37,15 @@ struct ChatCodeBlock: View {
                     }
                 } label: {
                     Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        .font(.caption)
+                        .font(PVFont.metaSmall)
+                        .foregroundStyle(Color.pvAccent)
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Copy code")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color(.tertiarySystemFill))
+            .background(Color.pvSurfaceRaised)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 configuration.label
@@ -51,8 +53,12 @@ struct ChatCodeBlock: View {
                     .padding(12)
             }
         }
-        .background(Color(.secondarySystemBackground))
+        .background(Color.pvCodeBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.pvHairline, lineWidth: 1)
+        )
         .markdownMargin(top: .em(0.6), bottom: .em(0.6))
     }
 }

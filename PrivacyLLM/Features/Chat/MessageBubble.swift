@@ -1,4 +1,5 @@
 import MarkdownUI
+import PrivacyUI
 import SwiftUI
 
 struct MessageBubble: View {
@@ -11,38 +12,47 @@ struct MessageBubble: View {
     var body: some View {
         HStack(alignment: .bottom) {
             if message.role == .user { Spacer(minLength: 48) }
-            VStack(alignment: .leading, spacing: 8) {
-                if message.role == .assistant, let reasoning = message.reasoning, !reasoning.isEmpty {
-                    ReasoningDisclosure(text: reasoning, initiallyExpanded: false)
-                }
-                if message.role == .assistant {
-                    // Assistant replies render markdown + highlighted code (FR-5).
-                    Markdown(message.content)
-                        .markdownTheme(.chat)
-                        .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
-                    if !message.sources.isEmpty {
-                        SourceChips(sources: message.sources)
+            VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if message.role == .assistant, let reasoning = message.reasoning, !reasoning.isEmpty {
+                        PVDisclosure("reasoning") {
+                            Text(reasoning)
+                        }
                     }
-                } else {
-                    Text(message.content)
-                }
-            }
-            .chatBubbleStyle(isUser: message.role == .user)
-            .contextMenu {
-                Button {
-                    UIPasteboard.general.string = message.content
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
-                if message.role == .user, let onEdit {
-                    Button(action: onEdit) {
-                        Label("Edit & Re-run", systemImage: "pencil")
+                    if message.role == .assistant {
+                        // Assistant replies render markdown + highlighted code (FR-5).
+                        Markdown(message.content)
+                            .markdownTheme(.chat)
+                            .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
+                        if !message.sources.isEmpty {
+                            SourceChips(sources: message.sources)
+                        }
+                    } else {
+                        Text(message.content)
                     }
                 }
-                if isLastAssistant, let onRegenerate {
-                    Button(action: onRegenerate) {
-                        Label("Regenerate", systemImage: "arrow.clockwise")
+                .textSelection(.enabled)
+                .pvChatBubble(message.role == .user ? .user : .assistant)
+                .contextMenu {
+                    Button {
+                        UIPasteboard.general.string = message.content
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
                     }
+                    if message.role == .user, let onEdit {
+                        Button(action: onEdit) {
+                            Label("Edit & Re-run", systemImage: "pencil")
+                        }
+                    }
+                    if isLastAssistant, let onRegenerate {
+                        Button(action: onRegenerate) {
+                            Label("Regenerate", systemImage: "arrow.clockwise")
+                        }
+                    }
+                }
+                if let statLine {
+                    PVStatLine(statLine)
+                        .padding(.leading, 4)
                 }
             }
             if message.role == .assistant { Spacer(minLength: 48) }
@@ -50,6 +60,19 @@ struct MessageBubble: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(message.role == .user ? "You said" : "Assistant said")
         .accessibilityValue(message.content)
+    }
+
+    /// "18.4 tok/s · qwen3-1.7b" under completed assistant replies.
+    private var statLine: String? {
+        guard message.role == .assistant else { return nil }
+        var parts: [String] = []
+        if let tps = message.stats?.tokensPerSecond {
+            parts.append(String(format: "%.1f tok/s", tps))
+        }
+        if let modelID = message.modelID {
+            parts.append(modelID)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
@@ -65,7 +88,9 @@ struct StreamingBubble: View {
                 if !reasoning.isEmpty {
                     // Expanded while the model is thinking; collapses in the
                     // persisted bubble (UX-6).
-                    ReasoningDisclosure(text: reasoning, initiallyExpanded: true)
+                    PVDisclosure("reasoning", initiallyExpanded: true) {
+                        Text(reasoning)
+                    }
                 }
                 if !text.isEmpty {
                     Markdown(text)
@@ -73,7 +98,7 @@ struct StreamingBubble: View {
                         .markdownCodeSyntaxHighlighter(HighlightrSyntaxHighlighter(colorScheme: colorScheme))
                 }
             }
-            .chatBubbleStyle(isUser: false)
+            .pvChatBubble(.assistant)
             Spacer(minLength: 48)
         }
         .accessibilityElement(children: .combine)
@@ -109,65 +134,26 @@ struct SourceChips: View {
     }
 
     private func chipLabel(_ source: SourceAttribution, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-            Text(source.title)
-                .lineLimit(1)
-            if let page = source.pageNumber {
-                Text("p.\(page)")
-            }
-        }
-        .font(.caption2)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.fill.tertiary, in: Capsule())
-        .foregroundStyle(.secondary)
-    }
-}
-
-struct ReasoningDisclosure: View {
-    let text: String
-    let initiallyExpanded: Bool
-    @State private var isExpanded: Bool
-
-    init(text: String, initiallyExpanded: Bool) {
-        self.text = text
-        self.initiallyExpanded = initiallyExpanded
-        _isExpanded = State(initialValue: initiallyExpanded)
-    }
-
-    var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            Text(text)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } label: {
-            Label("Reasoning", systemImage: "brain")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private extension View {
-    func chatBubbleStyle(isUser: Bool) -> some View {
-        padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                isUser ? AnyShapeStyle(.tint) : AnyShapeStyle(.fill.secondary),
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-            )
-            .foregroundStyle(isUser ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-            .textSelection(.enabled)
+        PVChip(
+            icon: icon,
+            text: source.title,
+            detail: source.pageNumber.map { "p.\($0)" }
+        )
     }
 }
 
 #Preview {
     VStack(spacing: 12) {
         MessageBubble(message: Message(conversationID: UUID(), role: .user, content: "What's on my calendar?"))
-        MessageBubble(message: Message(conversationID: UUID(), role: .assistant, content: "I can't see your calendar — but everything you ask me stays on this device."))
+        MessageBubble(message: Message(
+            conversationID: UUID(),
+            role: .assistant,
+            content: "I can't see your calendar — but everything you ask me stays on this device.",
+            modelID: "qwen3-1.7b",
+            stats: GenerationStats(tokensPerSecond: 18.4)
+        ))
         StreamingBubble(text: "Streaming a longer reply right")
     }
     .padding()
+    .pvScreen()
 }
