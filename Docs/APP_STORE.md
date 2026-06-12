@@ -1,5 +1,8 @@
 # App Store Submission Checklist
 
+> Start with **Docs/LAUNCH_HANDOFF.md** — it sequences everything below
+> into an ordered launch plan and tracks the open blockers.
+
 ## App Privacy questionnaire (PR-11, RR-5)
 
 Answer **"Data Not Collected"** for every category. Rationale: the app has no
