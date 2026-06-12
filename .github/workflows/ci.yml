@@ -34,6 +34,7 @@ jobs:
             -project PrivacyLLM.xcodeproj \
             -scheme PrivacyLLM \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipMacroValidation \
             -only-testing PrivacyLLMTests \
             CODE_SIGNING_ALLOWED=NO
 
