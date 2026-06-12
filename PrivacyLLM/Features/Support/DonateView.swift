@@ -24,7 +24,7 @@ struct DonateView: View {
             .padding(PVSpacing.l)
         }
         .pvScreen()
-        .navigationTitle("Support")
+        .navigationTitle("Donate")
         .navigationBarTitleDisplayMode(.inline)
         .task { await store.start() }
         .confirmationDialog(

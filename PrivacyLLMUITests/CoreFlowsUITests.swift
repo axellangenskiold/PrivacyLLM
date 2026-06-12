@@ -108,18 +108,9 @@ final class CoreFlowsUITests: XCTestCase {
     func testDonationPageOffersAmounts() throws {
         let app = launchApp()
         app.buttons["App menu"].tap()
-        app.buttons["Settings"].tap()
-
-        // The Support section sits below the fold and Form rows are realized
-        // lazily, so scroll until it comes into existence.
-        let support = app.staticTexts["Support PrivacyLLM"]
-        var swipes = 0
-        while !support.exists, swipes < 6 {
-            app.swipeUp()
-            swipes += 1
-        }
-        XCTAssertTrue(support.waitForExistence(timeout: 5))
-        support.tap()
+        let donate = app.buttons["Donate"]
+        XCTAssertTrue(donate.waitForExistence(timeout: 5))
+        donate.tap()
 
         // Four ways to give, none required (OD-12: the app is free). Queried
         // by identifier because the visible labels are App Store prices.

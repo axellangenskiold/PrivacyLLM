@@ -6,6 +6,7 @@ nonisolated enum AppRoute: Hashable {
     case models
     case documents
     case settings
+    case donate
 }
 
 struct ConversationListView: View {
@@ -42,6 +43,11 @@ struct ConversationListView: View {
                             } label: {
                                 Label("Settings", systemImage: "gearshape")
                             }
+                            Button {
+                                path.append(.donate)
+                            } label: {
+                                Label("Donate", systemImage: "heart")
+                            }
                         } label: {
                             Label("Menu", systemImage: "line.3.horizontal")
                         }
@@ -65,6 +71,8 @@ struct ConversationListView: View {
                         DocumentsView(environment: environment)
                     case .settings:
                         SettingsView(environment: environment)
+                    case .donate:
+                        DonateView()
                     }
                 }
                 .task { await viewModel.refresh() }

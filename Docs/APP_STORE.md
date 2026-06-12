@@ -66,7 +66,7 @@ model in the Models screen.
 
 ## Monetization (OD-12)
 
-The app is **free**; a voluntary donations page (Settings → Support) sells
+The app is **free**; a voluntary donations page (main menu → Donate) sells
 five consumable in-app purchases presented as donation amounts — the
 3.1.1-compliant "tip jar" pattern (Apple Pay donations are reserved for
 approved nonprofits under 3.2.1, so the rails are StoreKit even though the
