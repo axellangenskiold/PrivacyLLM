@@ -1,10 +1,10 @@
-# Privacy Policy — Local LLM
+# Privacy Policy — PrivacyLLM
 
 _Last updated: 2026-06-11_
 
 ## The short version
 
-We collect nothing. Local LLM has no servers, no accounts, no analytics, and
+We collect nothing. PrivacyLLM has no servers, no accounts, no analytics, and
 no telemetry. Everything you type, every reply the model writes, and every
 document you import stays on your device, stored encrypted.
 

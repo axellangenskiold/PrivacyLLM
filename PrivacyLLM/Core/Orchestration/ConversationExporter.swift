@@ -3,7 +3,7 @@ import Foundation
 /// Renders a conversation for the share sheet (FR-10).
 nonisolated enum ConversationExporter {
     static func markdown(conversation: Conversation, messages: [Message]) -> String {
-        var output = "# \(conversation.title)\n\n*Exported from Local LLM — generated and stored on-device.*\n"
+        var output = "# \(conversation.title)\n\n*Exported from PrivacyLLM — generated and stored on-device.*\n"
         for message in messages where message.role == .user || message.role == .assistant {
             output += "\n## \(message.role == .user ? "You" : "Assistant")\n\n\(message.content)\n"
             if !message.sources.isEmpty {

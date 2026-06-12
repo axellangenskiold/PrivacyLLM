@@ -291,7 +291,7 @@ private struct AboutSection: View {
         } header: {
             Text("About")
         } footer: {
-            Text("Local LLM runs entirely on your device. We collect nothing — there is nothing to collect it with.")
+            Text("PrivacyLLM runs entirely on your device. We collect nothing — there is nothing to collect it with.")
         }
     }
 }

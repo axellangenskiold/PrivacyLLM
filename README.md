@@ -1,14 +1,14 @@
-# Local LLM
+# PrivacyLLM
 
 **A private AI assistant that runs entirely on your iPhone.**
 
-Local LLM is a chat app powered by a small language model that runs directly on your device's GPU. There are no accounts, no cloud servers, and no third-party AI vendors. Your conversations, your documents, and the model's reasoning never leave your phone. The goal is simple: a genuinely private assistant that you fully own and control.
+PrivacyLLM is a chat app powered by a small language model that runs directly on your device's GPU. There are no accounts, no cloud servers, and no third-party AI vendors. Your conversations, your documents, and the model's reasoning never leave your phone. The goal is simple: a genuinely private assistant that you fully own and control.
 
 ---
 
 ## The Goal
 
-Most AI chat apps send everything you type to someone else's servers. Local LLM is built on the opposite premise — that a capable assistant can run on the phone in your pocket, with your data staying yours. It's designed for anyone who wants the usefulness of a modern chat assistant without handing their private thoughts, questions, and files to a company in the cloud.
+Most AI chat apps send everything you type to someone else's servers. PrivacyLLM is built on the opposite premise — that a capable assistant can run on the phone in your pocket, with your data staying yours. It's designed for anyone who wants the usefulness of a modern chat assistant without handing their private thoughts, questions, and files to a company in the cloud.
 
 ---
 
@@ -28,7 +28,7 @@ Most AI chat apps send everything you type to someone else's servers. Local LLM 
 
 ## Why It's Secure
 
-Local LLM's privacy isn't a setting you trust us to honor — it's a consequence of how the app is built.
+PrivacyLLM's privacy isn't a setting you trust us to honor — it's a consequence of how the app is built.
 
 - **There's nothing to breach.** We run no servers and store none of your data. There is no central database of conversations to be hacked, leaked, or subpoenaed, because it doesn't exist. Your data lives only on your device.
 
@@ -101,4 +101,4 @@ Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
-*Local LLM keeps your AI assistant where it belongs — in your hands, on your device.*
+*PrivacyLLM keeps your AI assistant where it belongs — in your hands, on your device.*

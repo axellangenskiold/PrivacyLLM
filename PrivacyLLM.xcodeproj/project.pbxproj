@@ -440,7 +440,7 @@
 				DEVELOPMENT_TEAM = 5QWX246F7X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Local LLM";
+				INFOPLIST_KEY_CFBundleDisplayName = "PrivacyLLM";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";
@@ -477,7 +477,7 @@
 				DEVELOPMENT_TEAM = 5QWX246F7X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Local LLM";
+				INFOPLIST_KEY_CFBundleDisplayName = "PrivacyLLM";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";

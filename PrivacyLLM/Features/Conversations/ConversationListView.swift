@@ -22,7 +22,7 @@ struct ConversationListView: View {
     var body: some View {
         NavigationStack(path: $path) {
             content
-                .navigationTitle("Local LLM")
+                .navigationTitle("PrivacyLLM")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {

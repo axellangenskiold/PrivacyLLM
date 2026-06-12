@@ -24,7 +24,7 @@ CryptoKit AES-GCM, HTTPS/ATS). In App Store Connect answer:
 
 ## Review notes (RR-8)
 
-> Local LLM runs an open-weights language model entirely on-device. On first
+> PrivacyLLM runs an open-weights language model entirely on-device. On first
 > run the app downloads model weight files (data, not executable code) from
 > huggingface.co, exactly like downloading any document. No code is
 > downloaded or executed; inference uses Apple's Metal GPU via the MLX
@@ -48,7 +48,7 @@ model in the Models screen.
 
 ## Metadata (RR-7)
 
-- **Name:** Local LLM — Private On-Device AI
+- **Name:** PrivacyLLM — Private On-Device AI
 - **Subtitle:** Private AI chat, no cloud
 - **Keywords:** private ai, offline ai, local llm, on-device, chat, gpt
   alternative, document chat, no tracking
