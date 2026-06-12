@@ -29,8 +29,9 @@ nonisolated struct PromptBuilder: Sendable {
 
         var includedNewestFirst: [PromptMessage] = []
         // Tool messages exist only in the in-memory agent transcript; they ride
-        // along so the model sees its own tool results (TL-1).
-        for message in history.reversed() where message.role != .system {
+        // along so the model sees its own tool results (TL-1). Attachment
+        // markers stay UI-only — retrieval already injects document content.
+        for message in history.reversed() where message.role != .system && message.role != .attachment {
             let cost = await tokens(message.content)
             if cost > budget {
                 if includedNewestFirst.isEmpty {

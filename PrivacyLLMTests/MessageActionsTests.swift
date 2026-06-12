@@ -81,4 +81,74 @@ struct ConversationExporterTests {
         #expect(text.contains("Assistant:\nhello"))
         #expect(!text.contains("tool noise"))
     }
+
+    @Test func attachmentsRenderAsAttachedLines() {
+        let conversation = Conversation(title: "Lease questions")
+        let messages = [
+            Message(conversationID: conversation.id, role: .attachment, content: "lease"),
+            Message(conversationID: conversation.id, role: .user, content: "what's the rent?"),
+            Message(conversationID: conversation.id, role: .assistant, content: "9 500 kr."),
+        ]
+        let markdown = ConversationExporter.markdown(conversation: conversation, messages: messages)
+        #expect(markdown.contains("📎 Attached: lease"))
+        let text = ConversationExporter.plainText(conversation: conversation, messages: messages)
+        #expect(text.contains("📎 Attached: lease"))
+    }
+}
+
+@MainActor
+struct AttachmentFlowTests {
+    /// FR-26/OD-6 follow-up: attaching a PDF leaves a persistent transcript
+    /// marker instead of a transient notice.
+    @Test func attachPersistsAnAttachmentMessage() async throws {
+        let environment = AppEnvironment(
+            database: try AppDatabase.inMemory(),
+            inference: MockInferenceService(tokenDelay: .milliseconds(1)),
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            search: MockSearchService(),
+            documents: MockDocumentService(),
+            voice: MockVoiceService()
+        )
+        let conversation = Conversation()
+        try await environment.conversationStore.insert(conversation)
+        let viewModel = ChatViewModel(conversation: conversation, environment: environment)
+
+        viewModel.attachDocument(at: URL(fileURLWithPath: "/tmp/lease.pdf"))
+        for _ in 0..<300 where viewModel.isIndexingAttachment || viewModel.messages.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(viewModel.attachmentNotice == nil)
+        #expect(viewModel.messages.last?.role == .attachment)
+        #expect(viewModel.messages.last?.content == "lease")
+        let persisted = try await environment.messageStore.fetchAll(conversationID: conversation.id)
+        #expect(persisted.map(\.role) == [.attachment])
+        #expect(persisted.first?.sources.first?.kind == .document)
+        #expect(persisted.first?.sources.first?.documentID != nil)
+    }
+
+    /// A failed import keeps the dismissible notice and persists nothing.
+    @Test func failedAttachShowsNoticeOnly() async throws {
+        let environment = AppEnvironment(
+            database: try AppDatabase.inMemory(),
+            inference: MockInferenceService(tokenDelay: .milliseconds(1)),
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            search: MockSearchService(),
+            documents: MockDocumentService(),
+            voice: MockVoiceService()
+        )
+        let conversation = Conversation()
+        try await environment.conversationStore.insert(conversation)
+        let viewModel = ChatViewModel(conversation: conversation, environment: environment)
+
+        viewModel.attachDocument(at: URL(fileURLWithPath: "/tmp/notes.txt"))
+        for _ in 0..<300 where viewModel.isIndexingAttachment || viewModel.attachmentNotice == nil {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(viewModel.attachmentNotice != nil)
+        #expect(viewModel.messages.isEmpty)
+        let persisted = try await environment.messageStore.fetchAll(conversationID: conversation.id)
+        #expect(persisted.isEmpty)
+    }
 }

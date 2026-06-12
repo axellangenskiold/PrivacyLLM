@@ -82,11 +82,21 @@ final class ChatViewModel {
         isIndexingAttachment = true
         attachmentNotice = nil
         let service = environment.documents
+        let store = environment.messageStore
         let conversationID = conversation.id
         Task {
             do {
                 let meta = try await service.importPDF(at: url, scope: .conversation(conversationID))
-                attachmentNotice = String(localized: "“\(meta.title)” attached — ask away.")
+                // The attachment joins the transcript as a persisted message;
+                // PromptBuilder keeps it away from the model.
+                let message = Message(
+                    conversationID: conversationID,
+                    role: .attachment,
+                    content: meta.title,
+                    sources: [SourceAttribution(kind: .document, title: meta.title, documentID: meta.id)]
+                )
+                try await store.append(message)
+                messages.append(message)
             } catch {
                 attachmentNotice = DocumentsViewModel.message(for: error)
             }

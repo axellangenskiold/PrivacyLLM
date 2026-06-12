@@ -148,6 +148,8 @@ actor MLXInferenceService: InferenceServicing {
             case .user: .user(message.content)
             case .assistant: .assistant(message.content)
             case .tool: .tool(message.content)
+            // PromptBuilder filters attachments out; map defensively anyway.
+            case .attachment: .user(message.content)
             }
         }
         var additionalContext: [String: any Sendable] = [:]

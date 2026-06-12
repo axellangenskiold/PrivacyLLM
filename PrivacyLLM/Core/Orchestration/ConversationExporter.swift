@@ -4,7 +4,11 @@ import Foundation
 nonisolated enum ConversationExporter {
     static func markdown(conversation: Conversation, messages: [Message]) -> String {
         var output = "# \(conversation.title)\n\n*Exported from PrivacyLLM — generated and stored on-device.*\n"
-        for message in messages where message.role == .user || message.role == .assistant {
+        for message in messages where message.role == .user || message.role == .assistant || message.role == .attachment {
+            if message.role == .attachment {
+                output += "\n📎 Attached: \(message.content)\n"
+                continue
+            }
             output += "\n## \(message.role == .user ? "You" : "Assistant")\n\n\(message.content)\n"
             if !message.sources.isEmpty {
                 let links = message.sources.map { source in
@@ -22,7 +26,11 @@ nonisolated enum ConversationExporter {
 
     static func plainText(conversation: Conversation, messages: [Message]) -> String {
         var output = "\(conversation.title)\n"
-        for message in messages where message.role == .user || message.role == .assistant {
+        for message in messages where message.role == .user || message.role == .assistant || message.role == .attachment {
+            if message.role == .attachment {
+                output += "\n📎 Attached: \(message.content)\n"
+                continue
+            }
             output += "\n\(message.role == .user ? "You" : "Assistant"):\n\(message.content)\n"
         }
         return output

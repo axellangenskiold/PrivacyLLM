@@ -168,38 +168,48 @@ struct ChatView: View {
                         emptyHint
                             .padding(.top, 48)
                     }
-                    if viewModel.isIndexingAttachment {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("Indexing document on this device…")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    ForEach(viewModel.messages) { message in
+                        if message.role == .attachment {
+                            PVAttachmentCard(
+                                title: message.content,
+                                subtitle: "PDF · indexed on this device",
+                                state: .ready
+                            )
+                            .accessibilityLabel("Attached document: \(message.content)")
+                        } else {
+                            MessageBubble(
+                                message: message,
+                                isLastAssistant: message.role == .assistant && message.id == viewModel.messages.last?.id,
+                                onRegenerate: { viewModel.regenerate() },
+                                onEdit: message.role == .user ? {
+                                    editText = message.content
+                                    editTarget = message
+                                } : nil
+                            )
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if viewModel.isIndexingAttachment {
+                        PVAttachmentCard(
+                            title: "Indexing document…",
+                            subtitle: "everything stays on this device",
+                            state: .indexing
+                        )
+                        .accessibilityLabel("Indexing document on this device…")
                     }
                     if let notice = viewModel.attachmentNotice {
                         HStack(spacing: 8) {
-                            Image(systemName: "paperclip")
-                                .foregroundStyle(.secondary)
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.pvWarning)
                             Text(notice)
                                 .font(.footnote)
+                                .foregroundStyle(Color.pvTextPrimary)
                             Spacer()
                             Button("OK") { viewModel.dismissAttachmentNotice() }
                                 .font(.footnote.bold())
+                                .foregroundStyle(Color.pvAccent)
                         }
-                        .padding(10)
-                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    ForEach(viewModel.messages) { message in
-                        MessageBubble(
-                            message: message,
-                            isLastAssistant: message.role == .assistant && message.id == viewModel.messages.last?.id,
-                            onRegenerate: { viewModel.regenerate() },
-                            onEdit: message.role == .user ? {
-                                editText = message.content
-                                editTarget = message
-                            } : nil
-                        )
+                        .padding(PVSpacing.m)
+                        .pvCard()
                     }
                     streamingRow
                     if let error = viewModel.errorMessage {

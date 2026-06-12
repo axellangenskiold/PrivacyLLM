@@ -5,6 +5,9 @@ nonisolated enum ChatRole: String, Codable, Sendable, CaseIterable {
     case user
     case assistant
     case tool
+    /// A document attached to this conversation, shown as a card in the
+    /// transcript. Never sent to the model — retrieval injects the content.
+    case attachment
 }
 
 nonisolated struct Conversation: Identifiable, Hashable, Codable, Sendable {

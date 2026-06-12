@@ -73,6 +73,18 @@ struct PromptBuilderTests {
         #expect(input.messages.first?.content == "real system")
     }
 
+    @Test func attachmentMessagesNeverReachTheModel() async {
+        let builder = PromptBuilder()
+        let history = [
+            message(.user, "read this", at: 1),
+            message(.attachment, "lease.pdf", at: 2),
+            message(.user, "what's the rent?", at: 3),
+        ]
+        let input = await builder.build(systemPrompt: nil, history: history, config: GenerationConfig())
+        #expect(input.messages.map(\.role) == [.user, .user])
+        #expect(!input.messages.map(\.content).contains("lease.pdf"))
+    }
+
     @Test func customTokenCounterDrivesBudgeting() async {
         let builder = PromptBuilder()
         let history = [
