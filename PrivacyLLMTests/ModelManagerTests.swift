@@ -143,13 +143,32 @@ struct ModelCatalogTests {
         let catalog = ModelCatalogLoader.load()
         #expect(!catalog.isEmpty)
         #expect(Set(catalog.map(\.id)).count == catalog.count)
+        #expect(Set(catalog.map(\.hfRepo)).count == catalog.count)
         for spec in catalog {
             #expect(!spec.licenseName.isEmpty)
             #expect(spec.sizeBytes > 100_000_000)
             #expect(!spec.roles.isEmpty)
+            #expect(spec.minRAMGB >= 4)
         }
         #expect(catalog.contains { $0.roles.contains(.fast) })
         #expect(catalog.contains { $0.roles.contains(.thinking) })
+    }
+
+    @Test func iteration2ModelsArePresent() {
+        let catalog = ModelCatalogLoader.load()
+        let qwen2b = catalog.first { $0.id == "qwen3.5-2b" }
+        #expect(qwen2b?.roles.sorted { $0.rawValue < $1.rawValue } == [.fast, .thinking])
+        #expect(qwen2b?.capabilities.nativeThinking == true)
+        let qwen4b = catalog.first { $0.id == "qwen3.5-4b" }
+        #expect(qwen4b?.roles == [.thinking])
+        let gemma = catalog.first { $0.id == "gemma-4-e2b" }
+        #expect(gemma?.roles == [.thinking])
+        #expect(gemma?.capabilities.nativeThinking == false)
+        #expect(gemma?.minRAMGB == 8)
+        // The onboarding RECOMMENDED chip points at a real fast model that
+        // fits every supported device.
+        #expect(qwen2b?.roles.contains(.fast) == true)
+        #expect(qwen2b?.minRAMGB == 4)
     }
 }
 

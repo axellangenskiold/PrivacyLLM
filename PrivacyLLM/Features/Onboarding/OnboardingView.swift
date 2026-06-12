@@ -109,7 +109,7 @@ struct OnboardingView: View {
                 ForEach(modelsViewModel.states.filter { $0.spec.roles.contains(.fast) }) { state in
                     OnboardingModelRow(
                         state: state,
-                        isRecommended: state.spec.id == "qwen3-1.7b-4bit",
+                        isRecommended: state.spec.id == "qwen3.5-2b",
                         onDownload: { modelsViewModel.download(state.id) },
                         onPause: { modelsViewModel.pause(state.id) },
                         onResume: { modelsViewModel.resume(state.id) }

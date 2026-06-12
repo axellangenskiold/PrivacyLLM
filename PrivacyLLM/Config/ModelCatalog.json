@@ -1,6 +1,51 @@
 {
-  "version": 1,
+  "version": 2,
   "models": [
+    {
+      "id": "qwen3.5-2b",
+      "displayName": "Qwen3.5 2B",
+      "family": "qwen3.5",
+      "hfRepo": "mlx-community/Qwen3.5-2B-4bit",
+      "roles": ["fast", "thinking"],
+      "sizeBytes": 1749079691,
+      "parameterCount": "2B",
+      "quantization": "4-bit",
+      "minRAMGB": 4,
+      "contextLength": 8192,
+      "licenseName": "Apache-2.0",
+      "licenseURLString": "https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE",
+      "capabilities": { "nativeThinking": true, "toolCalling": true }
+    },
+    {
+      "id": "qwen3.5-4b",
+      "displayName": "Qwen3.5 4B",
+      "family": "qwen3.5",
+      "hfRepo": "mlx-community/Qwen3.5-4B-4bit",
+      "roles": ["thinking"],
+      "sizeBytes": 3061129077,
+      "parameterCount": "4B",
+      "quantization": "4-bit",
+      "minRAMGB": 6,
+      "contextLength": 8192,
+      "licenseName": "Apache-2.0",
+      "licenseURLString": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "capabilities": { "nativeThinking": true, "toolCalling": true }
+    },
+    {
+      "id": "gemma-4-e2b",
+      "displayName": "Gemma 4 E2B",
+      "family": "gemma4",
+      "hfRepo": "mlx-community/gemma-4-e2b-it-4bit",
+      "roles": ["thinking"],
+      "sizeBytes": 3613528388,
+      "parameterCount": "E2B",
+      "quantization": "4-bit",
+      "minRAMGB": 8,
+      "contextLength": 8192,
+      "licenseName": "Apache-2.0",
+      "licenseURLString": "https://www.apache.org/licenses/LICENSE-2.0",
+      "capabilities": { "nativeThinking": false, "toolCalling": false }
+    },
     {
       "id": "qwen3-1.7b-4bit",
       "displayName": "Qwen3 1.7B",
