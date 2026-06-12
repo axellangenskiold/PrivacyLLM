@@ -3,7 +3,7 @@ import PrivacyUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-// swiftlint:disable:this type_body_length
+// swiftlint:disable:next type_body_length
 struct ChatView: View {
     private let environment: AppEnvironment
     @State private var viewModel: ChatViewModel
