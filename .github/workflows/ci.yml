@@ -48,6 +48,6 @@ jobs:
       - name: Install tools
         run: brew install swiftlint swiftformat
       - name: SwiftLint
-        run: swiftlint lint
+        run: swiftlint lint --strict --config .swiftlint-ci.yml
       - name: SwiftFormat (lint only)
         run: swiftformat --lint .

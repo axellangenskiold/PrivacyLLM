@@ -1,0 +1,12 @@
+parent_config: .swiftlint.yml
+
+disabled_rules:
+  - cyclomatic_complexity
+  - file_length
+  - function_body_length
+  - identifier_name
+  - large_tuple
+  - optional_data_string_conversion
+  - static_over_final_class
+  - trailing_comma
+  - unneeded_synthesized_initializer
