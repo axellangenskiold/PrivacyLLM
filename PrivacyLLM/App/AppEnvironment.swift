@@ -54,7 +54,12 @@ final class AppEnvironment {
     /// directly in the chat list.
     static func bootstrap() -> AppEnvironment {
         if ProcessInfo.processInfo.arguments.contains("--mock-services") {
-            let environment = AppEnvironment.mock()
+            // "--mock-slow-stream" widens generation to a deterministic window
+            // so UI tests can observe and exercise mid-stream states (stop).
+            let slowStream = ProcessInfo.processInfo.arguments.contains("--mock-slow-stream")
+            let environment = AppEnvironment.mock(
+                inference: slowStream ? MockInferenceService(tokenDelay: .milliseconds(150)) : nil
+            )
             if ProcessInfo.processInfo.arguments.contains("--skip-onboarding") {
                 let settings = environment.settingsStore
                 Task { try? await settings.set(true, for: .hasCompletedOnboarding) }

@@ -33,13 +33,16 @@ CryptoKit AES-GCM, HTTPS/ATS). In App Store Connect answer:
 > engine (DuckDuckGo by default), with a visible on-screen indicator.
 
 Demo instructions for the reviewer: complete onboarding on Wi-Fi (downloads
-~1 GB model), then chat. Airplane mode demonstrates full offline operation.
+the ~1.8 GB recommended model), then chat. Airplane mode demonstrates full
+offline operation.
 
 ## Model licenses (MR-6, RR-10)
 
 | Model | License | Redistribution notes |
 |---|---|---|
+| Qwen3.5 2B / 4B | Apache-2.0 | attribution in-app via license link |
 | Qwen3 1.7B / 4B | Apache-2.0 | attribution in-app via license link |
+| Gemma 4 E2B | Apache-2.0 | plain Apache-2.0 (Gemma 4 dropped the bespoke Gemma Terms) — no extra attribution gate |
 | Llama 3.2 1B / 3B | Llama 3.2 Community License | requires "Built with Llama" attribution and license display — verify before enabling in a store build, or ship Qwen-only initially |
 
 The app downloads weights from the public mlx-community repos; verify each
@@ -53,9 +56,10 @@ model in the Models screen.
 - **Keywords:** private ai, offline ai, local llm, on-device, chat, gpt
   alternative, document chat, no tracking
 - **Privacy policy URL:** host `Docs/PRIVACY_POLICY.md` (e.g. GitHub Pages)
-- **Screenshots:** chat with streamed markdown reply (light + dark), thinking
-  disclosure open, model manager mid-download, document Q&A with citation
-  chips, privacy explainer screen, egress banner during a search
+- **Screenshots:** chat with streamed markdown reply (dark "Obsidian Vault"
+  look + light), thinking disclosure open, model manager mid-download,
+  document Q&A with citation chips and the attachment card, privacy
+  explainer screen, egress banner during a search
 - **Age rating:** standard questionnaire; unrestricted web access = No (the
   app fetches search results as data; no browser is exposed) — answer
   honestly based on final review guidance

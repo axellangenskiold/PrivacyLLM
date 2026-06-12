@@ -32,6 +32,61 @@ extension Color {
     }
 }
 
+/// Static activity glyph: three emerald dots fading in emphasis.
+///
+/// Deliberately not animated and not a `ProgressView`. The chat transcript
+/// is a lazy stack, and anything that updates continuously inside it makes
+/// the container re-place its subviews every frame; under CPU contention
+/// that becomes an unrecoverable main-thread loop (reproduced twice on the
+/// iOS 26.2 simulator: first via the UIKit-bridged spinner re-resolving its
+/// dynamic tint in `updateUIView`, then via a repeatForever SwiftUI opacity
+/// animation flushing transactions through LazySubviewPlacements). Liveness
+/// is carried by the streaming text itself; this glyph just marks the wait.
+public struct PVActivityDots: View {
+    private let dotSize: CGFloat
+
+    public init(dotSize: CGFloat = 5) {
+        self.dotSize = dotSize
+    }
+
+    public var body: some View {
+        HStack(spacing: dotSize * 0.8) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.pvAccent)
+                    .frame(width: dotSize, height: dotSize)
+                    .opacity(1 - Double(index) * 0.35)
+            }
+        }
+        .accessibilityHidden(true) // hosts label the activity
+    }
+}
+
+/// Determinate progress capsule (pure SwiftUI; no UIKit bridge — see
+/// PVActivityDots for why).
+public struct PVProgressBar: View {
+    private let value: Double
+
+    public init(value: Double) {
+        self.value = value.isFinite ? min(max(value, 0), 1) : 0
+    }
+
+    public var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.pvSurfaceRaised)
+                Capsule()
+                    .fill(Color.pvAccent)
+                    .frame(width: max(proxy.size.width * value, 6))
+            }
+        }
+        .frame(height: 6)
+        .overlay(Capsule().strokeBorder(Color.pvHairline, lineWidth: 1))
+        .accessibilityElement()
+        .accessibilityValue("\(Int(value * 100))%")
+    }
+}
+
 /// Citation / metadata chip.
 public struct PVChip: View {
     private let icon: String
@@ -120,6 +175,9 @@ public struct PVBanner: View {
     VStack(spacing: 16) {
         PVBanner(.egress, icon: "arrow.up.forward.app.fill", text: "Searching the web — your query left this device")
         PVBanner(.warning, icon: "thermometer.high", text: "Device is warm — Fast mode is recommended")
+        PVActivityDots()
+        PVProgressBar(value: 0.62)
+            .frame(maxWidth: 160)
         HStack {
             Image(systemName: "globe")
                 .font(.system(size: 22))

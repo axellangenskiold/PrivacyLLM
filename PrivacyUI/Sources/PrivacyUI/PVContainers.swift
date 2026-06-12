@@ -97,8 +97,9 @@ public struct PVAttachmentCard: View {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color.pvAccent)
         case .indexing:
-            ProgressView()
-                .controlSize(.small)
+            // PVActivityDots, not ProgressView: this card lives in the lazy
+            // chat transcript where the bridged spinner can loop (see PVActivityDots).
+            PVActivityDots(dotSize: 4)
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(Color.pvWarning)

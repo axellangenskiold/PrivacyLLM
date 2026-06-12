@@ -15,7 +15,9 @@ final class CoreFlowsUITests: XCTestCase {
 
     @MainActor
     func testStopGenerationReturnsToIdle() throws {
-        let app = launchApp()
+        // Slow streaming keeps generation in flight long enough that the stop
+        // affordance is reliably observable, even on a loaded machine.
+        let app = launchApp(extraArguments: ["--mock-slow-stream"])
         app.buttons["New Chat"].firstMatch.tap()
 
         let input = app.textFields["Message input"]

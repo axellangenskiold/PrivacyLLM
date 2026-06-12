@@ -229,8 +229,19 @@ struct ChatView: View {
             // Only user-driven scrolling away from the bottom unpins;
             // returning to the bottom re-pins. Content growth alone must
             // never unpin, or following would die on the first streamed token.
-            .onScrollPhaseChange { _, newPhase in
+            .onScrollPhaseChange { oldPhase, newPhase, context in
                 userIsScrolling = newPhase == .tracking || newPhase == .interacting
+                // Geometry callbacks can be coalesced past a short drag under
+                // load, so also judge displacement at each phase boundary.
+                // `.animating` never appears here: that's our own scrollTo.
+                func isUserDriven(_ phase: ScrollPhase) -> Bool {
+                    phase == .tracking || phase == .interacting || phase == .decelerating
+                }
+                let geometry = context.geometry
+                let nearBottom = geometry.visibleRect.maxY >= geometry.contentSize.height - 60
+                if !nearBottom, isUserDriven(oldPhase) || isUserDriven(newPhase) {
+                    isPinnedToBottom = false
+                }
             }
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.visibleRect.maxY >= geometry.contentSize.height - 60
@@ -283,9 +294,8 @@ struct ChatView: View {
             StreamingBubble(text: viewModel.streamingText, reasoning: viewModel.streamingReasoning)
         } else if case .loadingModel(let progress) = viewModel.phase {
             HStack(spacing: 10) {
-                ProgressView(value: progress)
+                PVProgressBar(value: progress)
                     .frame(maxWidth: 160)
-                    .tint(Color.pvAccent)
                 Text("loading model…")
                     .font(PVFont.meta)
                     .foregroundStyle(Color.pvTextSecondary)
@@ -295,8 +305,7 @@ struct ChatView: View {
             .accessibilityLabel("Loading model…")
         } else if viewModel.phase == .generating {
             HStack(spacing: 8) {
-                ProgressView()
-                    .tint(Color.pvAccent)
+                PVActivityDots()
                 Text("thinking…")
                     .font(PVFont.meta)
                     .foregroundStyle(Color.pvTextSecondary)
@@ -310,8 +319,7 @@ struct ChatView: View {
     private func toolActivityRow(_ activity: ChatViewModel.ToolActivity) -> some View {
         HStack(spacing: 8) {
             if activity.isRunning {
-                ProgressView()
-                    .controlSize(.small)
+                PVActivityDots(dotSize: 4)
             } else {
                 Image(systemName: activity.isError ? "xmark.circle" : "checkmark.circle")
                     .foregroundStyle(activity.isError ? Color.pvWarning : Color.pvAccent)
