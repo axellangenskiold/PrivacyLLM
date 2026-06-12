@@ -1,6 +1,7 @@
 parent_config: .swiftlint.yml
 
-# Temporary CI debt carve-out for existing violations; re-enable these incrementally.
+# Temporary CI debt carve-out for existing violations.
+# Re-enable one rule at a time as each rule's current violations are cleaned up.
 disabled_rules:
   - cyclomatic_complexity
   - file_length
