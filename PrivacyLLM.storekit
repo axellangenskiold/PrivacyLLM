@@ -1,0 +1,87 @@
+{
+  "identifier": "04C033A2-195F-42D1-A725-568499B194C5",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.00",
+      "familyShareable": false,
+      "internalID": "10CBAC32-5D0E-4524-B056-7CE15508D393",
+      "localizations": [
+        {
+          "description": "A small thank-you. Unlocks nothing \u2014 the app is free.",
+          "displayName": "Small Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.axellangenskiold.PrivacyLLM.tip.small",
+      "referenceName": "Tip \u2014 Small ($1)",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "2.00",
+      "familyShareable": false,
+      "internalID": "FE003470-0E8F-4BB8-876B-B56A30EDE9B4",
+      "localizations": [
+        {
+          "description": "A medium thank-you. Unlocks nothing \u2014 the app is free.",
+          "displayName": "Medium Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.axellangenskiold.PrivacyLLM.tip.medium",
+      "referenceName": "Tip \u2014 Medium ($2)",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "3.00",
+      "familyShareable": false,
+      "internalID": "F6EBD29C-845B-4D12-A5CA-C6BF4594783D",
+      "localizations": [
+        {
+          "description": "A large thank-you. Unlocks nothing \u2014 the app is free.",
+          "displayName": "Large Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.axellangenskiold.PrivacyLLM.tip.large",
+      "referenceName": "Tip \u2014 Large ($3)",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "5.00",
+      "familyShareable": false,
+      "internalID": "31402728-5DCB-4924-AAA3-310FCE867286",
+      "localizations": [
+        {
+          "description": "A big thank-you. Unlocks nothing \u2014 the app is free.",
+          "displayName": "Big Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.axellangenskiold.PrivacyLLM.tip.big",
+      "referenceName": "Tip \u2014 Big ($5)",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "10.00",
+      "familyShareable": false,
+      "internalID": "BA9C0766-B32F-465E-A2C5-ED3B1C9B64C9",
+      "localizations": [
+        {
+          "description": "A huge thank-you. Unlocks nothing \u2014 the app is free.",
+          "displayName": "Huge Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.axellangenskiold.PrivacyLLM.tip.huge",
+      "referenceName": "Tip \u2014 Huge ($10)",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

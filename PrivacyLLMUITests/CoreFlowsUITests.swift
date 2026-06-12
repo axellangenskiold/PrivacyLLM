@@ -121,11 +121,12 @@ final class CoreFlowsUITests: XCTestCase {
         XCTAssertTrue(support.waitForExistence(timeout: 5))
         support.tap()
 
-        // Four ways to give, none required (OD-12: the app is free).
-        XCTAssertTrue(app.buttons["Donate $1"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Donate $2"].exists)
-        XCTAssertTrue(app.buttons["Donate $3"].exists)
-        XCTAssertTrue(app.buttons["Other amount…"].exists)
+        // Four ways to give, none required (OD-12: the app is free). Queried
+        // by identifier because the visible labels are App Store prices.
+        XCTAssertTrue(app.buttons["donate-tier-0"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["donate-tier-1"].exists)
+        XCTAssertTrue(app.buttons["donate-tier-2"].exists)
+        XCTAssertTrue(app.buttons["donate-other"].exists)
     }
 
     @MainActor

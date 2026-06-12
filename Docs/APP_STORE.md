@@ -66,22 +66,25 @@ model in the Models screen.
 
 ## Monetization (OD-12)
 
-The app is **free with no IAP**; a voluntary donations page (Settings →
-Support) presents Apple Pay directly via PassKit. Before this can work or
-ship:
+The app is **free**; a voluntary donations page (Settings → Support) sells
+five consumable in-app purchases presented as donation amounts — the
+3.1.1-compliant "tip jar" pattern (Apple Pay donations are reserved for
+approved nonprofits under 3.2.1, so the rails are StoreKit even though the
+page says "donation"). Nothing is delivered or unlocked; Apple takes its
+commission (15% under the Small Business Program). Before shipping:
 
-- [ ] Create merchant ID `merchant.com.axellangenskiold.PrivacyLLM` in the
-  developer portal and add the Apple Pay capability for it (Signing &
-  Capabilities). Until then the buttons show an "Apple Pay isn't available"
-  notice.
-- [ ] Wire a payment processor (e.g. Stripe) into
-  `ApplePayDonationCoordinator.didAuthorizePayment` — the raw PKPayment
-  token charges nobody.
-- [ ] **Review risk:** guideline 3.2.1 reserves Apple Pay donations for
-  approved nonprofits; developer "tips" are normally required to be
-  consumable IAP (3.1.1, Apple takes its commission). If review rejects the
-  PassKit flow, swap `DonateView.swift`'s coordinator for StoreKit
-  consumables ($0.99 / $1.99 / $2.99 tiers) — the page layout can stay.
+- [ ] Create the five consumables in App Store Connect with these exact
+  product IDs and flat price points (the App Store has supported $1/$2/$3
+  whole-dollar tiers since 2023):
+  `com.axellangenskiold.PrivacyLLM.tip.small` $1 · `.tip.medium` $2 ·
+  `.tip.large` $3 · `.tip.big` $5 · `.tip.huge` $10. Display names like
+  "Small Tip"; descriptions must say nothing is unlocked.
+- [ ] Until products exist (or the local `PrivacyLLM.storekit` configuration
+  is selected under scheme Run → Options → StoreKit Configuration), the
+  buttons show $1/$2/$3 placeholders and tapping explains donations are
+  unavailable.
+- [ ] Review notes: state that the tips are consumables, grant no features,
+  and that the app is fully functional without them.
 
 ## Pre-submission gates
 

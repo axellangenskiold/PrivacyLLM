@@ -1,21 +1,21 @@
-import PassKit
 import PrivacyUI
+import StoreKit
 import SwiftUI
 
 /// Voluntary support page (OD-12: the app is completely free). Donations
 /// unlock nothing — these buttons exist only for people who want to give.
 struct DonateView: View {
-    @State private var coordinator = ApplePayDonationCoordinator()
-    @State private var showCustomAmount = false
-    @State private var customAmountText = ""
+    @State private var store = DonationStore()
+    @State private var showOtherAmounts = false
+    @Environment(\.purchase) private var purchase
 
     var body: some View {
-        @Bindable var coordinator = coordinator
+        @Bindable var store = store
         ScrollView {
             VStack(spacing: PVSpacing.xl) {
                 hero
                 amountButtons
-                Text("Donations go through Apple Pay and support development. They don't unlock anything — every feature is already yours.")
+                Text("Donations are processed by the App Store and support development. They don't unlock anything — every feature is already yours.")
                     .font(.footnote)
                     .foregroundStyle(Color.pvTextSecondary)
                     .multilineTextAlignment(.center)
@@ -26,23 +26,27 @@ struct DonateView: View {
         .pvScreen()
         .navigationTitle("Support")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Choose an amount", isPresented: $showCustomAmount) {
-            TextField("Amount in US dollars", text: $customAmountText)
-                .keyboardType(.decimalPad)
-            Button("Continue") { donateCustomAmount() }
-            Button("Cancel", role: .cancel) { customAmountText = "" }
+        .task { await store.start() }
+        .confirmationDialog(
+            "Choose an amount",
+            isPresented: $showOtherAmounts,
+            titleVisibility: .visible
+        ) {
+            ForEach(store.otherTiers) { product in
+                Button(product.displayPrice) { donate(product) }
+            }
         } message: {
-            Text("Any amount helps — thank you.")
+            Text("Every amount helps — thank you.")
         }
-        .alert("Thank you ❤️", isPresented: $coordinator.showThanks) {
+        .alert("Thank you ❤️", isPresented: $store.showThanks) {
             Button("OK") {}
         } message: {
             Text("Your support keeps PrivacyLLM free for everyone.")
         }
-        .alert("Apple Pay isn't available", isPresented: noticePresented) {
-            Button("OK") { coordinator.notice = nil }
+        .alert("Donations unavailable", isPresented: noticePresented) {
+            Button("OK") { store.notice = nil }
         } message: {
-            if let notice = coordinator.notice {
+            if let notice = store.notice {
                 Text(notice)
             }
         }
@@ -68,15 +72,23 @@ struct DonateView: View {
         }
     }
 
+    /// Labels come from the App Store once products load; the placeholders
+    /// keep the page legible (and tappable, with an explanation) before then.
+    private static let placeholderPrices = ["$1", "$2", "$3"]
+
     private var amountButtons: some View {
         VStack(spacing: PVSpacing.m) {
             HStack(spacing: PVSpacing.m) {
-                amountButton("$1") { coordinator.donate(1) }
-                amountButton("$2") { coordinator.donate(2) }
-                amountButton("$3") { coordinator.donate(3) }
+                ForEach(0..<3) { index in
+                    tierButton(index)
+                }
             }
             Button {
-                showCustomAmount = true
+                if store.otherTiers.isEmpty {
+                    store.productsMissing()
+                } else {
+                    showOtherAmounts = true
+                }
             } label: {
                 Text("Other amount…")
                     .font(PVFont.headline)
@@ -86,13 +98,22 @@ struct DonateView: View {
             }
             .buttonStyle(.plain)
             .pvCard()
-            .accessibilityHint("Lets you type an amount, then opens Apple Pay")
+            .accessibilityIdentifier("donate-other")
+            .accessibilityHint("Offers larger donation amounts")
         }
+        .disabled(store.purchaseInFlight)
     }
 
-    private func amountButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
+    private func tierButton(_ index: Int) -> some View {
+        let product = store.tiers.indices.contains(index) ? store.tiers[index] : nil
+        return Button {
+            if let product {
+                donate(product)
+            } else {
+                store.productsMissing()
+            }
+        } label: {
+            Text(product?.displayPrice ?? Self.placeholderPrices[index])
                 .font(PVFont.title)
                 .foregroundStyle(Color.pvAccent)
                 .frame(maxWidth: .infinity)
@@ -100,108 +121,112 @@ struct DonateView: View {
         }
         .buttonStyle(.plain)
         .pvCard()
-        .accessibilityLabel("Donate \(label)")
-        .accessibilityHint("Opens Apple Pay")
+        .accessibilityLabel("Donate \(product?.displayPrice ?? Self.placeholderPrices[index])")
+        .accessibilityIdentifier("donate-tier-\(index)")
     }
 
     private var noticePresented: Binding<Bool> {
         Binding(
-            get: { coordinator.notice != nil },
-            set: { if !$0 { coordinator.notice = nil } }
+            get: { store.notice != nil },
+            set: { if !$0 { store.notice = nil } }
         )
     }
 
-    private func donateCustomAmount() {
-        // Swedish (and most European) keyboards produce a decimal comma.
-        let normalized = customAmountText.replacingOccurrences(of: ",", with: ".")
-        customAmountText = ""
-        guard let amount = Decimal(string: normalized), amount > 0 else { return }
-        coordinator.donate(amount)
+    private func donate(_ product: Product) {
+        guard !store.purchaseInFlight else { return }
+        store.purchaseInFlight = true
+        Task {
+            defer { store.purchaseInFlight = false }
+            do {
+                let result = try await purchase(product)
+                await store.handle(result)
+            } catch {
+                store.purchaseFailed()
+            }
+        }
     }
 }
 
-/// Presents the Apple Pay sheet for a donation and reports the outcome.
+/// The donation tiers are StoreKit consumables — the mechanism Apple requires
+/// for developer tips (guideline 3.1.1) — so the page reads "donation" while
+/// the rails are ordinary in-app purchases. Nothing is delivered or unlocked;
+/// a finished transaction just earns a thank-you.
 ///
-/// Shipping checklist (none of this blocks local builds — until done, the
-/// sheet simply won't present and the user sees the "isn't available" notice):
-/// 1. Create `merchantIdentifier` in the Apple Developer portal and add the
-///    Apple Pay capability with it under Signing & Capabilities.
-/// 2. Wire a payment processor into `didAuthorizePayment` — the PKPayment
-///    token on its own charges nobody.
-/// 3. App Review: Apple Pay donations are normally reserved for approved
-///    nonprofits (guideline 3.2.1); tips to a developer are expected to be
-///    consumable in-app purchases (3.1.1). Be ready to swap this file's
-///    PassKit flow for StoreKit consumables if review pushes back.
+/// The product IDs below must exist as consumables in App Store Connect
+/// (recommended flat price points: $1 / $2 / $3 / $5 / $10). For local
+/// testing without App Store Connect, select PrivacyLLM.storekit in the
+/// scheme (Run → Options → StoreKit Configuration).
 @Observable
-final class ApplePayDonationCoordinator: NSObject {
-    static let merchantIdentifier = "merchant.com.axellangenskiold.PrivacyLLM"
+final class DonationStore {
+    static let tierIDs = [
+        "com.axellangenskiold.PrivacyLLM.tip.small",
+        "com.axellangenskiold.PrivacyLLM.tip.medium",
+        "com.axellangenskiold.PrivacyLLM.tip.large",
+    ]
+    static let otherTierIDs = [
+        "com.axellangenskiold.PrivacyLLM.tip.big",
+        "com.axellangenskiold.PrivacyLLM.tip.huge",
+    ]
 
+    private(set) var tiers: [Product] = []
+    private(set) var otherTiers: [Product] = []
     var showThanks = false
     var notice: String?
+    var purchaseInFlight = false
 
-    private var controller: PKPaymentAuthorizationController?
-    private var didAuthorize = false
-
-    func donate(_ amount: Decimal) {
-        guard controller == nil else { return }
-        guard PKPaymentAuthorizationController.canMakePayments() else {
-            notice = String(localized: "This device can't use Apple Pay. The app stays completely free either way.")
-            return
+    /// Loads products, settles anything left unfinished (Ask to Buy approved
+    /// later, crash mid-thanks), then follows transaction updates for as long
+    /// as the page is on screen — the hosting `.task` cancels us on pop.
+    func start() async {
+        await loadProducts()
+        for await unfinished in StoreKit.Transaction.unfinished {
+            await settle(unfinished)
         }
-
-        var exact = amount
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &exact, 2, .bankers)
-
-        let request = PKPaymentRequest()
-        request.merchantIdentifier = Self.merchantIdentifier
-        request.merchantCapabilities = .threeDSecure
-        request.countryCode = "SE"
-        request.currencyCode = "USD"
-        request.supportedNetworks = [.visa, .masterCard, .amex]
-        request.paymentSummaryItems = [
-            PKPaymentSummaryItem(
-                label: String(localized: "Donation to PrivacyLLM"),
-                amount: NSDecimalNumber(decimal: rounded)
-            ),
-        ]
-
-        didAuthorize = false
-        let controller = PKPaymentAuthorizationController(paymentRequest: request)
-        controller.delegate = self
-        self.controller = controller
-        controller.present { [weak self] presented in
-            guard !presented, let self else { return }
-            Task { @MainActor in
-                self.controller = nil
-                self.notice = String(localized: "Apple Pay couldn't be opened. Check that a card is set up in the Wallet app.")
-            }
+        for await update in StoreKit.Transaction.updates {
+            if Task.isCancelled { break }
+            await settle(update)
         }
     }
-}
 
-extension ApplePayDonationCoordinator: PKPaymentAuthorizationControllerDelegate {
-    // PassKit calls these on a private queue.
-    nonisolated func paymentAuthorizationController(
-        _ controller: PKPaymentAuthorizationController,
-        didAuthorizePayment payment: PKPayment,
-        handler completion: @escaping (PKPaymentAuthorizationResult) -> Void
-    ) {
-        // A payment processor must consume `payment.token` here before this
-        // ships; accepting the token without one moves no money.
-        completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
-        Task { @MainActor in self.didAuthorize = true }
+    private func loadProducts() async {
+        guard tiers.isEmpty else { return }
+        do {
+            let products = try await Product.products(for: Self.tierIDs + Self.otherTierIDs)
+                .sorted { $0.price < $1.price }
+            tiers = products.filter { Self.tierIDs.contains($0.id) }
+            otherTiers = products.filter { Self.otherTierIDs.contains($0.id) }
+        } catch {
+            // Buttons keep their placeholder labels; tapping one explains.
+        }
     }
 
-    nonisolated func paymentAuthorizationControllerDidFinish(_ controller: PKPaymentAuthorizationController) {
-        controller.dismiss()
-        Task { @MainActor in
-            self.controller = nil
-            if self.didAuthorize {
-                self.didAuthorize = false
-                self.showThanks = true
-                Haptics.success()
-            }
+    func handle(_ result: Product.PurchaseResult) async {
+        switch result {
+        case .success(let verification):
+            await settle(verification)
+        case .pending:
+            notice = String(localized: "The donation is waiting for approval — thank you!")
+        case .userCancelled:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    func purchaseFailed() {
+        notice = String(localized: "The App Store couldn't complete the donation. Please try again later.")
+    }
+
+    func productsMissing() {
+        notice = String(localized: "Donations aren't available right now. The app stays completely free either way.")
+    }
+
+    private func settle(_ verification: VerificationResult<StoreKit.Transaction>) async {
+        guard case .verified(let transaction) = verification else { return }
+        await transaction.finish()
+        if transaction.productType == .consumable, transaction.revocationDate == nil {
+            showThanks = true
+            Haptics.success()
         }
     }
 }
