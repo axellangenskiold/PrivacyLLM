@@ -4,6 +4,7 @@ import SwiftUI
 struct ModelManagerView: View {
     @State private var viewModel: ModelManagerViewModel
     @State private var ramWarningTarget: ModelSpec?
+    @State private var ramInfoTarget: ModelSpec?
 
     init(environment: AppEnvironment) {
         _viewModel = State(initialValue: ModelManagerViewModel(environment: environment))
@@ -18,6 +19,7 @@ struct ModelManagerView: View {
                         isActiveFast: viewModel.isActive(state, as: .fast),
                         isActiveThinking: viewModel.isActive(state, as: .thinking),
                         exceedsRAM: viewModel.exceedsDeviceRAM(state.spec),
+                        onRAMInfo: { ramInfoTarget = state.spec },
                         onDownload: { requestDownload(state.spec) },
                         onPause: { viewModel.pause(state.id) },
                         onResume: { viewModel.resume(state.id) },
@@ -53,6 +55,22 @@ struct ModelManagerView: View {
                 Text("\(spec.displayName) wants \(spec.minRAMGB) GB of RAM. Loading it here may be unstable.")
             }
         }
+        .alert(
+            "May not run on this device",
+            isPresented: ramInfoPresented,
+            presenting: ramInfoTarget
+        ) { _ in
+            Button("OK", role: .cancel) { ramInfoTarget = nil }
+        } message: { spec in
+            Text("\(spec.displayName) needs about \(spec.minRAMGB) GB of memory to load, but this device has \(Self.deviceRAMDescription) — and iOS only lets an app use part of that. The model would likely fail to load, or the system would stop the app mid-reply. A smaller model will run reliably here.")
+        }
+    }
+
+    /// What the hardware actually reports (an "8 GB" iPhone reports ~7.5 GB
+    /// usable), matching the comparison behind the warning triangle.
+    private static var deviceRAMDescription: String {
+        let gb = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        return String(format: "%.1f GB", gb)
     }
 
     private var storageFooter: String {
@@ -65,6 +83,13 @@ struct ModelManagerView: View {
         Binding(
             get: { ramWarningTarget != nil },
             set: { if !$0 { ramWarningTarget = nil } }
+        )
+    }
+
+    private var ramInfoPresented: Binding<Bool> {
+        Binding(
+            get: { ramInfoTarget != nil },
+            set: { if !$0 { ramInfoTarget = nil } }
         )
     }
 
@@ -82,6 +107,7 @@ private struct ModelRow: View {
     let isActiveFast: Bool
     let isActiveThinking: Bool
     let exceedsRAM: Bool
+    let onRAMInfo: () -> Void
     let onDownload: () -> Void
     let onPause: () -> Void
     let onResume: () -> Void
@@ -104,9 +130,21 @@ private struct ModelRow: View {
                 .font(PVFont.metaSmall)
                 .foregroundStyle(Color.pvTextSecondary)
             HStack(spacing: 8) {
-                Label("\(state.spec.minRAMGB) GB RAM", systemImage: exceedsRAM ? "exclamationmark.triangle.fill" : "memorychip")
-                    .font(PVFont.metaSmall)
-                    .foregroundStyle(exceedsRAM ? Color.pvWarning : Color.pvTextSecondary)
+                if exceedsRAM {
+                    // The triangle is a question waiting to be asked — answer it.
+                    Button(action: onRAMInfo) {
+                        Label("\(state.spec.minRAMGB) GB RAM", systemImage: "exclamationmark.triangle.fill")
+                            .font(PVFont.metaSmall)
+                            .foregroundStyle(Color.pvWarning)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Needs \(state.spec.minRAMGB) gigabytes of memory, more than this device has")
+                    .accessibilityHint("Shows why this model may not run on this device")
+                } else {
+                    Label("\(state.spec.minRAMGB) GB RAM", systemImage: "memorychip")
+                        .font(PVFont.metaSmall)
+                        .foregroundStyle(Color.pvTextSecondary)
+                }
                 if let url = URL(string: state.spec.licenseURLString) {
                     Link(destination: url) {
                         Label(state.spec.licenseName, systemImage: "doc.text")
