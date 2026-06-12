@@ -33,6 +33,7 @@
 		1AB686000000000000000033 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000032 /* MarkdownUI */; };
 		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
 		1AB686000000000000000043 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000042 /* SwiftSoup */; };
+		1AB686000000000000000053 /* PrivacyUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000052 /* PrivacyUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +74,7 @@
 				1AB686000000000000000033 /* MarkdownUI in Frameworks */,
 				1AB686000000000000000035 /* Highlightr in Frameworks */,
 				1AB686000000000000000043 /* SwiftSoup in Frameworks */,
+				1AB686000000000000000053 /* PrivacyUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +144,7 @@
 				1AB686000000000000000032 /* MarkdownUI */,
 				1AB686000000000000000034 /* Highlightr */,
 				1AB686000000000000000042 /* SwiftSoup */,
+				1AB686000000000000000052 /* PrivacyUI */,
 			);
 			productName = PrivacyLLM;
 			productReference = 1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */;
@@ -233,6 +236,7 @@
 				1AB686000000000000000031 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				1AB686000000000000000036 /* XCRemoteSwiftPackageReference "Highlightr" */,
 				1AB686000000000000000041 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				1AB686000000000000000051 /* XCLocalSwiftPackageReference "PrivacyUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1AB6855F2FD9FB03000548D4 /* Products */;
@@ -589,6 +593,13 @@
 		};
 /* End XCBuildConfiguration section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		1AB686000000000000000051 /* XCLocalSwiftPackageReference "PrivacyUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PrivacyUI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		1AB686000000000000000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -693,6 +704,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1AB686000000000000000041 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
 			productName = SwiftSoup;
+		};
+		1AB686000000000000000052 /* PrivacyUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PrivacyUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 
