@@ -101,10 +101,9 @@ nonisolated struct ToolCallParser: Sendable {
     private static func holdbackLength(of text: String, for tag: String) -> Int {
         let maxLength = min(text.count, tag.count - 1)
         guard maxLength > 0 else { return 0 }
-        for length in stride(from: maxLength, through: 1, by: -1) {
-            if text.hasSuffix(String(tag.prefix(length))) {
-                return length
-            }
+        for length in stride(from: maxLength, through: 1, by: -1)
+            where text.hasSuffix(String(tag.prefix(length))) {
+            return length
         }
         return 0
     }

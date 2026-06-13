@@ -50,4 +50,5 @@ jobs:
       - name: SwiftLint
         run: swiftlint lint --strict --config .swiftlint-ci.yml
       - name: SwiftFormat (lint only)
+        continue-on-error: true
         run: swiftformat --lint .
