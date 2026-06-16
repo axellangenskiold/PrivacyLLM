@@ -116,7 +116,7 @@ struct SettingsView: View {
             }
             .pvListRow()
 
-            AboutSection()
+            AboutSection(llamaLicenseURL: viewModel.llamaLicenseURL)
                 .pvListRow()
         }
         .scrollContentBackground(.hidden)
@@ -273,6 +273,10 @@ struct PrivacyActivityView: View {
 }
 
 private struct AboutSection: View {
+    /// Non-nil when a Llama-family model ships in the catalog; carries the URL of
+    /// the Llama 3.2 Community License so it can be linked (license §1.b.i).
+    let llamaLicenseURL: URL?
+
     private static let dependencies: [(name: String, license: String, url: String)] = [
         ("GRDB.swift", "MIT", "https://github.com/groue/GRDB.swift"),
         ("MLX Swift / mlx-swift-lm", "MIT", "https://github.com/ml-explore/mlx-swift-lm"),
@@ -313,10 +317,21 @@ private struct AboutSection: View {
                     Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
             }
+            if let llamaLicenseURL {
+                Link(destination: llamaLicenseURL) {
+                    Label("Built with Llama", systemImage: "checkmark.seal")
+                }
+            }
         } header: {
             Text("About")
         } footer: {
-            Text("PrivacyLLM runs entirely on your device. We collect nothing — there is nothing to collect it with.")
+            VStack(alignment: .leading, spacing: 8) {
+                Text("PrivacyLLM runs entirely on your device. We collect nothing — there is nothing to collect it with.")
+                if llamaLicenseURL != nil {
+                    // Required attribution notice — Llama 3.2 Community License §1.b.i.
+                    Text("Llama 3.2 is licensed under the Llama 3.2 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.")
+                }
+            }
         }
     }
 }

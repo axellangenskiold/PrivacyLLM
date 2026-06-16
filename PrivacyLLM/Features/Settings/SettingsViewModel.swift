@@ -46,6 +46,17 @@ final class SettingsViewModel {
     private(set) var recentEgressEvents: [EgressEvent] = []
     private(set) var loaded = false
 
+    /// Llama 3.2 Community License (§1.b.i) requires a visible "Built with Llama"
+    /// attribution plus a copy of the license whenever a Llama model ships. Driven
+    /// by the catalog so the attribution disappears automatically if Llama is ever
+    /// dropped from Config/ModelCatalog.json. Returns the license URL to link, or
+    /// nil when no Llama-family model is offered.
+    var llamaLicenseURL: URL? {
+        environment.modelManager.catalog
+            .first { $0.family.lowercased().hasPrefix("llama") }
+            .flatMap { URL(string: $0.licenseURLString) }
+    }
+
     private let environment: AppEnvironment
 
     init(environment: AppEnvironment) {
