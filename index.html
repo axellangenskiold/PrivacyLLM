@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — PrivacyLLM</title>
+<meta name="description" content="PrivacyLLM collects nothing. No servers, no accounts, no analytics. Everything stays on your device, encrypted.">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0E1113;
+    color: #D7DEE3;
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 72px 24px 96px; }
+  h1 { font-size: 2rem; line-height: 1.2; color: #FFFFFF; margin: 0 0 .35em; letter-spacing: -0.01em; }
+  .accent { color: #34D399; }
+  .updated { color: #7E8A92; font-size: .95rem; margin: 0 0 2.5em; }
+  h2 { font-size: 1.2rem; color: #34D399; margin: 2.6em 0 .6em; }
+  p { margin: .8em 0; }
+  a { color: #34D399; text-decoration: none; border-bottom: 1px solid rgba(52,211,153,.35); }
+  a:hover { border-bottom-color: #34D399; }
+  strong { color: #FFFFFF; font-weight: 600; }
+  ul, ol { padding-left: 1.3em; margin: .8em 0; }
+  li { margin: .55em 0; }
+  .short {
+    background: #161B1F;
+    border: 1px solid #232C32;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin: 1.5em 0 0;
+  }
+  .short p { margin: 0; }
+  footer {
+    margin-top: 4em;
+    padding-top: 1.6em;
+    border-top: 1px solid #1C2227;
+    color: #6B757C;
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Privacy Policy <span class="accent">— PrivacyLLM</span></h1>
+    <p class="updated">Last updated: 2026-06-11</p>
+
+    <div class="short">
+      <p><strong>The short version.</strong> We collect nothing. PrivacyLLM has no servers, no accounts, no analytics, and no telemetry. Everything you type, every reply the model writes, and every document you import stays on your device, stored encrypted.</p>
+    </div>
+
+    <h2>What the app does with your data</h2>
+    <ul>
+      <li><strong>Conversations and documents</strong> are processed by an AI model running entirely on your iPhone and stored locally using iOS Data Protection plus app-level encryption (keys live in your device's Keychain).</li>
+      <li><strong>Voice input</strong> is transcribed by iOS on-device speech recognition. Audio never leaves the phone.</li>
+      <li><strong>Document indexing</strong> uses Apple's on-device language tools. Your documents are never uploaded.</li>
+    </ul>
+
+    <h2>The only network activity</h2>
+    <ol>
+      <li><strong>Model downloads.</strong> When you choose to download a model, the app fetches weight files from huggingface.co. This is a plain file download; nothing about you or your usage is sent.</li>
+      <li><strong>Web search (off by default).</strong> If you turn search on, the assistant may send short keyword queries to the search provider you select (DuckDuckGo by default). A visible indicator appears whenever this happens, and every query is listed in Settings → Privacy Activity. Your conversation text is never sent — only the distilled keywords.</li>
+      <li><strong>Apple system assets.</strong> iOS may download Apple's language assets the first time you use dictation or document indexing. This is an operating system download from Apple and involves none of your content.</li>
+    </ol>
+
+    <h2>What we collect</h2>
+    <p>Nothing. We have no analytics SDKs, no advertising identifiers, no crash reporting service, and no backend. Crash diagnostics collected by Apple's MetricKit remain on your device and are never transmitted to us.</p>
+
+    <h2>Data retention and deletion</h2>
+    <p>All data lives on your device. Delete any conversation or document in-app, or use Settings → Data to clear everything. Deleting the app removes all of its data.</p>
+
+    <h2>Contact</h2>
+    <p>Questions: open an issue at <a href="https://github.com/axellangenskiold/PrivacyLLM">github.com/axellangenskiold/PrivacyLLM</a>.</p>
+
+    <footer>PrivacyLLM runs entirely on your device. We collect nothing — there is nothing to collect it with.</footer>
+  </main>
+</body>
+</html>
