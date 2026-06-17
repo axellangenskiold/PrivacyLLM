@@ -43,10 +43,12 @@ struct ConversationListView: View {
                             } label: {
                                 Label("Settings", systemImage: "gearshape")
                             }
-                            Button {
-                                path.append(.donate)
-                            } label: {
-                                Label("Donate", systemImage: "heart")
+                            if FeatureFlags.current.isEnabled(.donations) {
+                                Button {
+                                    path.append(.donate)
+                                } label: {
+                                    Label("Donate", systemImage: "heart")
+                                }
                             }
                         } label: {
                             Label("Menu", systemImage: "line.3.horizontal")

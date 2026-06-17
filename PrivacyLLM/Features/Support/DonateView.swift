@@ -6,7 +6,6 @@ import SwiftUI
 /// unlock nothing — these buttons exist only for people who want to give.
 struct DonateView: View {
     @State private var store = DonationStore()
-    @State private var showOtherAmounts = false
     @Environment(\.purchase) private var purchase
 
     var body: some View {
@@ -27,17 +26,6 @@ struct DonateView: View {
         .navigationTitle("Donate")
         .navigationBarTitleDisplayMode(.inline)
         .task { await store.start() }
-        .confirmationDialog(
-            "Choose an amount",
-            isPresented: $showOtherAmounts,
-            titleVisibility: .visible
-        ) {
-            ForEach(store.otherTiers) { product in
-                Button(product.displayPrice) { donate(product) }
-            }
-        } message: {
-            Text("Every amount helps — thank you.")
-        }
         .alert("Thank you ❤️", isPresented: $store.showThanks) {
             Button("OK") {}
         } message: {
@@ -74,32 +62,13 @@ struct DonateView: View {
 
     /// Labels come from the App Store once products load; the placeholders
     /// keep the page legible (and tappable, with an explanation) before then.
-    private static let placeholderPrices = ["$1", "$2", "$3"]
+    private static let placeholderPrices = ["$1", "$3", "$5"]
 
     private var amountButtons: some View {
-        VStack(spacing: PVSpacing.m) {
-            HStack(spacing: PVSpacing.m) {
-                ForEach(0..<3) { index in
-                    tierButton(index)
-                }
+        HStack(spacing: PVSpacing.m) {
+            ForEach(0..<3) { index in
+                tierButton(index)
             }
-            Button {
-                if store.otherTiers.isEmpty {
-                    store.productsMissing()
-                } else {
-                    showOtherAmounts = true
-                }
-            } label: {
-                Text("Other amount…")
-                    .font(PVFont.headline)
-                    .foregroundStyle(Color.pvAccent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, PVSpacing.l)
-            }
-            .buttonStyle(.plain)
-            .pvCard()
-            .accessibilityIdentifier("donate-other")
-            .accessibilityHint("Offers larger donation amounts")
         }
         .disabled(store.purchaseInFlight)
     }
@@ -152,24 +121,19 @@ struct DonateView: View {
 /// the rails are ordinary in-app purchases. Nothing is delivered or unlocked;
 /// a finished transaction just earns a thank-you.
 ///
-/// The product IDs below must exist as consumables in App Store Connect
-/// (recommended flat price points: $1 / $2 / $3 / $5 / $10). For local
-/// testing without App Store Connect, select PrivacyLLM.storekit in the
-/// scheme (Run → Options → StoreKit Configuration).
+/// The product IDs below must exist as consumables in App Store Connect at flat
+/// price points $1 / $3 / $5. For local testing without App Store Connect,
+/// select PrivacyLLM.storekit in the scheme (Run → Options → StoreKit
+/// Configuration).
 @Observable
 final class DonationStore {
     static let tierIDs = [
         "com.axellangenskiold.PrivacyLLM.tip.small",
         "com.axellangenskiold.PrivacyLLM.tip.medium",
-        "com.axellangenskiold.PrivacyLLM.tip.large",
-    ]
-    static let otherTierIDs = [
         "com.axellangenskiold.PrivacyLLM.tip.big",
-        "com.axellangenskiold.PrivacyLLM.tip.huge",
     ]
 
     private(set) var tiers: [Product] = []
-    private(set) var otherTiers: [Product] = []
     var showThanks = false
     var notice: String?
     var purchaseInFlight = false
@@ -191,10 +155,8 @@ final class DonationStore {
     private func loadProducts() async {
         guard tiers.isEmpty else { return }
         do {
-            let products = try await Product.products(for: Self.tierIDs + Self.otherTierIDs)
+            tiers = try await Product.products(for: Self.tierIDs)
                 .sorted { $0.price < $1.price }
-            tiers = products.filter { Self.tierIDs.contains($0.id) }
-            otherTiers = products.filter { Self.otherTierIDs.contains($0.id) }
         } catch {
             // Buttons keep their placeholder labels; tapping one explains.
         }

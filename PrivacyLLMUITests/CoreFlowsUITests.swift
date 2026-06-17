@@ -105,19 +105,34 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testDonationsHiddenWhenDisabled() throws {
+        // Force the donations flag off (independent of the shipped default) and
+        // confirm the menu offers no Donate entry — the gate works.
+        let app = launchApp(extraArguments: ["--no-feature-donations"])
+        app.buttons["App menu"].tap()
+        // Settings being present confirms the menu actually opened, so the
+        // absence of Donate below is meaningful.
+        XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Donate"].exists)
+    }
+
+    @MainActor
     func testDonationPageOffersAmounts() throws {
-        let app = launchApp()
+        // Force the flag on so the page is covered regardless of the shipped
+        // default.
+        let app = launchApp(extraArguments: ["--feature-donations"])
         app.buttons["App menu"].tap()
         let donate = app.buttons["Donate"]
         XCTAssertTrue(donate.waitForExistence(timeout: 5))
         donate.tap()
 
-        // Four ways to give, none required (OD-12: the app is free). Queried
-        // by identifier because the visible labels are App Store prices.
+        // Exactly three tiers ($1 / $3 / $5), none required (OD-12: the app is
+        // free). Queried by identifier because the visible labels are App Store
+        // prices. There is no "other amount" affordance.
         XCTAssertTrue(app.buttons["donate-tier-0"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["donate-tier-1"].exists)
         XCTAssertTrue(app.buttons["donate-tier-2"].exists)
-        XCTAssertTrue(app.buttons["donate-other"].exists)
+        XCTAssertFalse(app.buttons["donate-other"].exists)
     }
 
     @MainActor
