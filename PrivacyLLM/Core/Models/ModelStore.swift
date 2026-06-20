@@ -27,6 +27,41 @@ nonisolated struct ModelStore: Sendable {
         baseDirectory.appending(path: modelID, directoryHint: .isDirectory)
     }
 
+    // MARK: Imported models
+
+    /// Specs for user-imported models live alongside the weights so they survive
+    /// relaunches without touching the bundled catalog (OD-10).
+    private var importedManifestURL: URL {
+        baseDirectory.appending(path: "imported.json")
+    }
+
+    func loadImportedSpecs() -> [ModelSpec] {
+        guard let data = try? Data(contentsOf: importedManifestURL),
+              let specs = try? JSONDecoder().decode([ModelSpec].self, from: data)
+        else { return [] }
+        return specs
+    }
+
+    func saveImportedSpecs(_ specs: [ModelSpec]) {
+        if specs.isEmpty {
+            try? FileManager.default.removeItem(at: importedManifestURL)
+            return
+        }
+        if let data = try? JSONEncoder().encode(specs) {
+            try? data.write(to: importedManifestURL)
+        }
+    }
+
+    /// Copies a user-picked model folder into place and marks it ready to load.
+    func importDirectory(from source: URL, as modelID: String) throws {
+        let final = directory(for: modelID)
+        try? FileManager.default.removeItem(at: final)
+        try FileManager.default.copyItem(at: source, to: final)
+        let marker = final.appending(path: Self.completionMarker)
+        try Data(ISO8601DateFormatter().string(from: .now).utf8).write(to: marker)
+        excludeFromBackup(final)
+    }
+
     func partialDirectory(for modelID: String) -> URL {
         baseDirectory.appending(path: ".partial", directoryHint: .isDirectory)
             .appending(path: modelID, directoryHint: .isDirectory)

@@ -4,8 +4,13 @@ import Foundation
 /// via ModelDownloader, weights in ModelStore, active fast/thinking selections
 /// in SettingsStore, and a local egress-log entry per download (PR-14).
 actor RealModelManager: ModelManaging {
-    nonisolated let catalog: [ModelSpec]
+    /// Bundled models plus any the user imported (read from disk so runtime
+    /// imports are visible everywhere `catalog` is consulted).
+    nonisolated var catalog: [ModelSpec] {
+        bundleCatalog + store.loadImportedSpecs()
+    }
 
+    private let bundleCatalog: [ModelSpec]
     private let store: ModelStore
     private let downloader: ModelDownloader
     private let settings: SettingsStore
@@ -23,7 +28,7 @@ actor RealModelManager: ModelManaging {
         settingsStore: SettingsStore,
         egressEventStore: EgressEventStore
     ) {
-        self.catalog = catalog
+        self.bundleCatalog = catalog
         self.store = store
         let api = HuggingFaceAPI(session: session)
         self.downloader = ModelDownloader(api: api, store: store)
@@ -185,7 +190,72 @@ actor RealModelManager: ModelManaging {
         for role in ModelRole.allCases where await activeModelID(for: role) == modelID {
             try? await settings.remove(Self.settingsKey(for: role))
         }
+        // Drop imported models from the manifest entirely so they don't linger
+        // as ghost "not downloaded" rows.
+        var imported = store.loadImportedSpecs()
+        if let index = imported.firstIndex(where: { $0.id == modelID }) {
+            imported.remove(at: index)
+            store.saveImportedSpecs(imported)
+            phases[modelID] = nil
+        }
         notify()
+    }
+
+    func importModel(displayName: String, from folder: URL) async throws -> ModelSpec {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? folder.lastPathComponent : trimmed
+        // A folder is only a usable MLX model if it carries a config.json.
+        let configURL = folder.appending(path: "config.json")
+        guard FileManager.default.fileExists(atPath: configURL.path) else {
+            throw ModelManagerError.invalidImport(
+                String(localized: "That folder has no config.json — pick a folder with MLX model files.")
+            )
+        }
+
+        let id = "imported-\(UUID().uuidString.prefix(8).lowercased())"
+        try store.importDirectory(from: folder, as: id)
+
+        let sizeBytes = store.diskBytes(for: id) ?? 0
+        let spec = ModelSpec(
+            id: id,
+            displayName: name,
+            family: Self.detectFamily(configURL: configURL),
+            hfRepo: "",
+            roles: [.fast, .thinking],
+            sizeBytes: sizeBytes,
+            parameterCount: String(localized: "Custom"),
+            quantization: "—",
+            minRAMGB: max(4, Int((Double(sizeBytes) / 1_073_741_824).rounded(.up)) + 1),
+            contextLength: 8192,
+            licenseName: String(localized: "Imported"),
+            licenseURLString: "",
+            capabilities: ModelCapabilities(nativeThinking: false, toolCalling: false),
+            releaseDate: Self.today()
+        )
+
+        var imported = store.loadImportedSpecs()
+        imported.append(spec)
+        store.saveImportedSpecs(imported)
+        phases[id] = .downloaded
+        notify()
+        return spec
+    }
+
+    /// Reads `model_type` from config.json so our prompt scaffolds can match a
+    /// known family (e.g. "qwen3", "llama"); falls back to a generic family.
+    private static func detectFamily(configURL: URL) -> String {
+        guard let data = try? Data(contentsOf: configURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = json["model_type"] as? String
+        else { return "imported" }
+        return type
+    }
+
+    private static func today() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: .now)
     }
 
     func localDirectory(for modelID: String) -> URL? {

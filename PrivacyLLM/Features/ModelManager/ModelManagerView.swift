@@ -1,19 +1,22 @@
 import PrivacyUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ModelManagerView: View {
     @State private var viewModel: ModelManagerViewModel
     @State private var ramWarningTarget: ModelSpec?
     @State private var ramInfoTarget: ModelSpec?
+    @State private var isImporting = false
 
     init(environment: AppEnvironment) {
         _viewModel = State(initialValue: ModelManagerViewModel(environment: environment))
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         List {
             Section {
-                ForEach(viewModel.states) { state in
+                ForEach(viewModel.sortedStates) { state in
                     ModelRow(
                         state: state,
                         isActiveFast: viewModel.isActive(state, as: .fast),
@@ -38,6 +41,42 @@ struct ModelManagerView: View {
         .scrollContentBackground(.hidden)
         .pvScreen()
         .navigationTitle("Models")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Sort by", selection: $viewModel.sortOrder) {
+                        ForEach(ModelSortOrder.allCases) { order in
+                            Label(order.label, systemImage: order.systemImage).tag(order)
+                        }
+                    }
+                    Divider()
+                    Button {
+                        isImporting = true
+                    } label: {
+                        Label("Import Model…", systemImage: "square.and.arrow.down")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("Sort and import models")
+            }
+        }
+        .fileImporter(
+            isPresented: $isImporting,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImport(result)
+        }
+        .alert(
+            "Couldn't import model",
+            isPresented: importErrorPresented,
+            presenting: viewModel.importError
+        ) { _ in
+            Button("OK", role: .cancel) { viewModel.clearImportError() }
+        } message: { message in
+            Text(message)
+        }
         .task { viewModel.start() }
         .onDisappear { viewModel.stopObserving() }
         .confirmationDialog(
@@ -91,6 +130,23 @@ struct ModelManagerView: View {
             get: { ramInfoTarget != nil },
             set: { if !$0 { ramInfoTarget = nil } }
         )
+    }
+
+    private var importErrorPresented: Binding<Bool> {
+        Binding(
+            get: { viewModel.importError != nil },
+            set: { if !$0 { viewModel.clearImportError() } }
+        )
+    }
+
+    private func handleImport(_ result: Result<[URL], any Error>) {
+        guard case .success(let urls) = result, let folder = urls.first else { return }
+        // A picked folder comes security-scoped; hold access while we copy it.
+        let scoped = folder.startAccessingSecurityScopedResource()
+        Task {
+            await viewModel.importModel(displayName: folder.lastPathComponent, from: folder)
+            if scoped { folder.stopAccessingSecurityScopedResource() }
+        }
     }
 
     private func requestDownload(_ spec: ModelSpec) {

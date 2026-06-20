@@ -5,6 +5,7 @@ actor MockModelManager: ModelManaging {
     nonisolated let catalog: [ModelSpec]
 
     private var phases: [String: ModelDownloadPhase]
+    private var imported: [ModelSpec] = []
     private var active: [ModelRole: String] = [:]
     private var downloadTasks: [String: Task<Void, Never>] = [:]
     private var observers: [UUID: AsyncStream<[ModelState]>.Continuation] = [:]
@@ -28,7 +29,7 @@ actor MockModelManager: ModelManaging {
     }
 
     func states() -> [ModelState] {
-        catalog.map { spec in
+        (catalog + imported).map { spec in
             ModelState(
                 spec: spec,
                 phase: phases[spec.id] ?? .notDownloaded,
@@ -90,6 +91,30 @@ actor MockModelManager: ModelManaging {
             active[role] = nil
         }
         notify()
+    }
+
+    func importModel(displayName: String, from folder: URL) async throws -> ModelSpec {
+        let name = displayName.isEmpty ? folder.lastPathComponent : displayName
+        let spec = ModelSpec(
+            id: "imported-\(UUID().uuidString.prefix(8).lowercased())",
+            displayName: name,
+            family: "imported",
+            hfRepo: "",
+            roles: [.fast, .thinking],
+            sizeBytes: 1_000_000_000,
+            parameterCount: "Custom",
+            quantization: "—",
+            minRAMGB: 4,
+            contextLength: 8192,
+            licenseName: "Imported",
+            licenseURLString: "",
+            capabilities: ModelCapabilities(),
+            releaseDate: nil
+        )
+        imported.append(spec)
+        phases[spec.id] = .downloaded
+        notify()
+        return spec
     }
 
     func localDirectory(for modelID: String) -> URL? {

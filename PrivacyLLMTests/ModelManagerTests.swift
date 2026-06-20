@@ -220,4 +220,58 @@ struct RealModelManagerTests {
         let states = await manager.states()
         #expect(states.first { $0.id == ModelSpec.previewFast.id }?.phase == .notDownloaded)
     }
+
+    @Test func importRegistersDownloadedModelThatSurvivesDelete() async throws {
+        let (manager, store) = try makeManager()
+        // A minimal "model" folder: config.json is the only thing import requires.
+        let source = FileManager.default.temporaryDirectory.appending(path: "import-src-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try Data(#"{"model_type":"qwen3"}"#.utf8).write(to: source.appending(path: "config.json"))
+        try Data(repeating: 0xCD, count: 2048).write(to: source.appending(path: "model.safetensors"))
+
+        let spec = try await manager.importModel(displayName: "My Model", from: source)
+        #expect(spec.isImported)
+        #expect(spec.family == "qwen3")
+        #expect(store.isDownloaded(spec.id))
+        #expect(store.loadImportedSpecs().contains { $0.id == spec.id })
+        // It shows up as a ready-to-use row, and `catalog` lookups resolve it.
+        let states = await manager.states()
+        #expect(states.first { $0.id == spec.id }?.phase == .downloaded)
+        #expect(manager.catalog.contains { $0.id == spec.id })
+
+        try await manager.deleteModel(spec.id)
+        #expect(!store.isDownloaded(spec.id))
+        #expect(store.loadImportedSpecs().isEmpty)
+        #expect(!manager.catalog.contains { $0.id == spec.id })
+    }
+
+    @Test func importRejectsFolderWithoutConfig() async throws {
+        let (manager, _) = try makeManager()
+        let source = FileManager.default.temporaryDirectory.appending(path: "bad-src-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        await #expect(throws: ModelManagerError.self) {
+            _ = try await manager.importModel(displayName: "Bad", from: source)
+        }
+    }
+}
+
+struct ModelSortingTests {
+    @Test func parameterCountParses() {
+        #expect(ModelSpec.previewThinking.parameterCountValue == 4)
+        var spec = ModelSpec.previewFast
+        spec.parameterCount = "1.7B"
+        #expect(spec.parameterCountValue == 1.7)
+        spec.parameterCount = "E2B"
+        #expect(spec.parameterCountValue == 2)
+        spec.parameterCount = "Custom"
+        #expect(spec.parameterCountValue == 0)
+    }
+
+    @Test func releaseDateParsesAndDefaultsOld() {
+        var spec = ModelSpec.previewFast
+        spec.releaseDate = "2025-04-28"
+        #expect(spec.releaseDateValue > Date.distantPast)
+        spec.releaseDate = nil
+        #expect(spec.releaseDateValue == .distantPast)
+    }
 }

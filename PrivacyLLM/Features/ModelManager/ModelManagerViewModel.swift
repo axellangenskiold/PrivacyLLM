@@ -6,6 +6,8 @@ final class ModelManagerViewModel {
     private(set) var states: [ModelState] = []
     private(set) var activeFastID: String?
     private(set) var activeThinkingID: String?
+    var sortOrder: ModelSortOrder = .parameterSize
+    private(set) var importError: String?
 
     private let manager: any ModelManaging
     private var observationTask: Task<Void, Never>?
@@ -16,6 +18,31 @@ final class ModelManagerViewModel {
 
     var totalDiskBytes: Int64 {
         states.reduce(0) { $0 + ($1.diskBytes ?? 0) }
+    }
+
+    /// Catalog rows ordered by the chosen criterion (largest/newest/most RAM first).
+    var sortedStates: [ModelState] {
+        states.sorted { lhs, rhs in
+            switch sortOrder {
+            case .parameterSize: lhs.spec.parameterCountValue > rhs.spec.parameterCountValue
+            case .releaseDate: lhs.spec.releaseDateValue > rhs.spec.releaseDateValue
+            case .ram: lhs.spec.minRAMGB > rhs.spec.minRAMGB
+            }
+        }
+    }
+
+    func importModel(displayName: String, from folder: URL) async {
+        do {
+            _ = try await manager.importModel(displayName: displayName, from: folder)
+        } catch let ModelManagerError.invalidImport(message) {
+            importError = message
+        } catch {
+            importError = error.localizedDescription
+        }
+    }
+
+    func clearImportError() {
+        importError = nil
     }
 
     func start() {

@@ -21,6 +21,7 @@ nonisolated enum ModelManagerError: Error, Sendable {
     case unknownModel
     case checksumMismatch(file: String)
     case deletionFailed(String)
+    case invalidImport(String)
 }
 
 /// Catalog, downloads (progress + pause/resume + checksum), storage, and the
@@ -40,6 +41,10 @@ nonisolated protocol ModelManaging: Sendable {
     func resumeDownload(_ modelID: String) async
     func cancelDownload(_ modelID: String) async
     func deleteModel(_ modelID: String) async throws
+
+    /// Copies a user-picked model folder into storage and registers it as a
+    /// ready-to-use imported model (OD-10). Returns the synthesized spec.
+    func importModel(displayName: String, from folder: URL) async throws -> ModelSpec
 
     /// Directory containing the downloaded weights, nil until downloaded.
     func localDirectory(for modelID: String) async -> URL?
