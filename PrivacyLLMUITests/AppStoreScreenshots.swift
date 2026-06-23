@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 
 /// App Store screenshot capture, driving the all-mock environment to its most
@@ -35,22 +36,35 @@ final class AppStoreScreenshots: XCTestCase {
     /// Last line of the mock reply — its presence means the reply finished rendering.
     private let replyDone = "Everything you type stays on this device."
 
-    /// iOS shows a one-time "Type in two languages" intro over the keyboard the
-    /// first time it appears; clear it so it never lands in a shot.
-    private func clearKeyboardIntro(_ app: XCUIApplication) {
-        let cont = app.buttons["Continue"]
-        if cont.exists { cont.tap() }
+    /// Send a message and wait for the whole canned reply to render (not just the
+    /// mid-stream heading), so shots never catch a half-streamed bubble.
+    private func send(_ app: XCUIApplication, _ text: String) {
+        let input = app.textFields["Message input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap()
+        input.typeText(text)
+        app.buttons["Send message"].tap()
+        XCTAssertTrue(app.staticTexts[replyDone].waitForExistence(timeout: 25))
     }
 
-    /// Drag the transcript down. ChatView dismisses the keyboard on an interactive
-    /// scroll (.scrollDismissesKeyboard), and repeated drags reach the top.
-    private func dragDown(_ app: XCUIApplication) {
+    /// An upper-screen drag (above the keyboard) that scrolls the transcript;
+    /// ChatView dismisses the keyboard on an interactive scroll.
+    private func dragUpperDown(_ app: XCUIApplication) {
         let w = app.windows.firstMatch
-        w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
-            .press(forDuration: 0.05, thenDragTo: w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78)))
+        w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            .press(forDuration: 0.1, thenDragTo: w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72)))
     }
 
-    /// Re-pin to the live tail so no jump-to-bottom affordance lingers.
+    private func dismissKeyboard(_ app: XCUIApplication) {
+        var tries = 0
+        while app.keyboards.firstMatch.exists, tries < 5 {
+            dragUpperDown(app)
+            tries += 1
+        }
+    }
+
+    /// Re-pin to the live tail so no jump-to-bottom affordance lingers and the
+    /// shot shows the reply's conclusion ("…stays on this device").
     private func pinToBottom(_ app: XCUIApplication) {
         let jump = app.buttons["Scroll to latest"]
         if jump.waitForExistence(timeout: 2) { jump.tap() }
@@ -68,13 +82,10 @@ final class AppStoreScreenshots: XCTestCase {
     func test02Chat() throws {
         let app = launch()
         app.buttons["New Chat"].firstMatch.tap()
-        let input = app.textFields["Message input"]
-        XCTAssertTrue(input.waitForExistence(timeout: 5))
-        input.tap()
-        input.typeText("How do you keep my data private?")
-        app.buttons["Send message"].tap()
-        // Canned reply finished rendering once its markdown heading is on screen.
-        XCTAssertTrue(app.staticTexts["What works here"].waitForExistence(timeout: 20))
+        send(app, "How do you keep my data private?")
+        dismissKeyboard(app)
+        pinToBottom(app)
+        Thread.sleep(forTimeInterval: 0.6)
         snap("02-chat")
     }
 
@@ -85,19 +96,15 @@ final class AppStoreScreenshots: XCTestCase {
         let mode = app.otherElements["Model mode"]
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
         mode.buttons["Thinking"].tap()
+        send(app, "Plan a focused week for me.")
+        dismissKeyboard(app)
 
-        let input = app.textFields["Message input"]
-        input.tap()
-        input.typeText("Plan a focused week for me.")
-        app.buttons["Send message"].tap()
-        XCTAssertTrue(app.staticTexts["What works here"].waitForExistence(timeout: 20))
-
-        // The persisted reply keeps a collapsed reasoning disclosure — expand it
-        // so the on-device reasoning is the star of the shot.
+        // Bring the top of the reply into view, then expand the reasoning
+        // disclosure — the tap also settles the lazy layout.
+        for _ in 0..<5 { dragUpperDown(app) }
         let reasoning = app.buttons["reasoning"]
-        if reasoning.waitForExistence(timeout: 5) {
-            reasoning.tap()
-        }
+        if reasoning.waitForExistence(timeout: 5) { reasoning.tap() }
+        Thread.sleep(forTimeInterval: 0.6)
         snap("03-thinking")
     }
 
@@ -109,12 +116,10 @@ final class AppStoreScreenshots: XCTestCase {
         XCTAssertTrue(off.waitForExistence(timeout: 5))
         off.tap()
         XCTAssertTrue(app.buttons["Web search on"].waitForExistence(timeout: 5))
-
-        let input = app.textFields["Message input"]
-        input.tap()
-        input.typeText("What's new in on-device AI this week?")
-        app.buttons["Send message"].tap()
-        XCTAssertTrue(app.staticTexts["What works here"].waitForExistence(timeout: 20))
+        send(app, "What's new in on-device AI this week?")
+        dismissKeyboard(app)
+        pinToBottom(app)
+        Thread.sleep(forTimeInterval: 0.6)
         snap("04-search")
     }
 

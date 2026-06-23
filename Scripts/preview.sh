@@ -6,20 +6,20 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-SIM_NAME="${SIM_NAME:-iPhone 17 Pro Max}"
+SIM_NAME="${SIM_NAME:-iPhone 11 Pro Max}"   # 1242 x 2688 — 6.5" app-preview size
 MODE="${MODE:-dark}"
 SCHEME=PrivacyLLM
 PROJECT=PrivacyLLM.xcodeproj
 OUT="Marketing/preview"; mkdir -p "$OUT"
 
-UDID=$(xcrun simctl list devices available | grep -m1 "$SIM_NAME (" | grep -oE '[0-9A-Fa-f-]{36}')
-[ -n "$UDID" ] || { echo "No available simulator named '$SIM_NAME'"; exit 1; }
+UDID=$(xcrun simctl list devices available | grep -m1 "$SIM_NAME (" | grep -oE '[0-9A-Fa-f-]{36}' | head -1)
+[ -n "$UDID" ] || { echo "Run Scripts/screenshots.sh first to create the '$SIM_NAME' simulator."; exit 1; }
 echo "Simulator: $SIM_NAME ($UDID), appearance: $MODE"
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
 xcrun simctl ui "$UDID" appearance "$MODE"
 xcrun simctl status_bar "$UDID" override \
-  --time "9:41" --batteryState charged --batteryLevel 100 \
+  --time "9:41" --batteryState discharging --batteryLevel 100 \
   --cellularMode active --cellularBars 4 --wifiBars 3 --dataNetwork wifi 2>/dev/null || true
 
 # Build first so the recording only covers the actual run.
