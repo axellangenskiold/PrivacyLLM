@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — PrivacyLLM</title>
+<meta name="description" content="PrivacyLLM collects nothing. No servers, no accounts, no analytics. Everything stays on your device.">
+<style>
+  :root {
+    --bg: #0E1113; --card: #161A1D; --accent: #34D399;
+    --text: #E7ECEA; --muted: #9AA5A1; --hair: #2A3033;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .badge {
+    width: 44px; height: 44px; border-radius: 12px; flex: none;
+    background: rgba(52,211,153,.14); display: grid; place-items: center;
+  }
+  .badge svg { width: 24px; height: 24px; }
+  h1 { font-size: 1.7rem; margin: 0; letter-spacing: -.02em; }
+  .updated { color: var(--muted); font-size: .9rem; margin: 4px 0 36px; }
+  h2 { font-size: 1.15rem; margin: 36px 0 10px; letter-spacing: -.01em; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  strong { color: #fff; }
+  a { color: var(--accent); }
+  .lede {
+    background: var(--card); border: 1px solid var(--hair); border-radius: 16px;
+    padding: 20px 22px; margin: 0 0 8px;
+  }
+  .lede p { margin: 0; }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--hair); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <circle cx="12" cy="11" r="2"></circle><path d="M12 13v3"></path>
+      </svg>
+    </span>
+    <h1>Privacy Policy — PrivacyLLM</h1>
+  </header>
+  <p class="updated">Last updated: 11 June 2026</p>
+
+  <div class="lede">
+    <p><strong>The short version:</strong> We collect nothing. PrivacyLLM has no servers, no accounts, no analytics, and no telemetry. Everything you type, every reply the model writes, and every document you import stays on your device, stored encrypted.</p>
+  </div>
+
+  <h2>What the app does with your data</h2>
+  <ul>
+    <li><strong>Conversations and documents</strong> are processed by an AI model running entirely on your iPhone and stored locally using iOS Data Protection plus app-level encryption (keys live in your device's Keychain).</li>
+    <li><strong>Voice input</strong> is transcribed by iOS on-device speech recognition. Audio never leaves the phone.</li>
+    <li><strong>Document indexing</strong> uses Apple's on-device language tools. Your documents are never uploaded.</li>
+  </ul>
+
+  <h2>The only network activity</h2>
+  <ul>
+    <li><strong>Model downloads.</strong> When you choose to download a model, the app fetches weight files from huggingface.co. This is a plain file download; nothing about you or your usage is sent.</li>
+    <li><strong>Web search (off by default).</strong> If you turn search on, the assistant may send short keyword queries to the search provider you select (DuckDuckGo by default). A visible indicator appears whenever this happens, and every query is listed in Settings → Privacy Activity. Your conversation text is never sent — only the distilled keywords.</li>
+    <li><strong>Apple system assets.</strong> iOS may download Apple's language assets the first time you use dictation or document indexing. This is an operating-system download from Apple and involves none of your content.</li>
+  </ul>
+
+  <h2>What we collect</h2>
+  <p>Nothing. We have no analytics SDKs, no advertising identifiers, no crash reporting service, and no backend. Crash diagnostics collected by Apple's MetricKit remain on your device and are never transmitted to us.</p>
+
+  <h2>Data retention and deletion</h2>
+  <p>All data lives on your device. Delete any conversation or document in-app, or use Settings → Data to clear everything. Deleting the app removes all of its data.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue at <a href="https://github.com/axellangenskiold/PrivacyLLM">github.com/axellangenskiold/PrivacyLLM</a>.</p>
+
+  <footer>PrivacyLLM — a private AI assistant that runs entirely on your iPhone.</footer>
+</div>
+</body>
+</html>

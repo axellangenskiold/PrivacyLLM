@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support — PrivacyLLM</title>
+<meta name="description" content="Help and contact for PrivacyLLM, a private AI assistant that runs entirely on your iPhone.">
+<style>
+  :root {
+    --bg: #0E1113; --card: #161A1D; --accent: #34D399;
+    --text: #E7ECEA; --muted: #9AA5A1; --hair: #2A3033;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .badge {
+    width: 44px; height: 44px; border-radius: 12px; flex: none;
+    background: rgba(52,211,153,.14); display: grid; place-items: center;
+  }
+  .badge svg { width: 24px; height: 24px; }
+  h1 { font-size: 1.7rem; margin: 0; letter-spacing: -.02em; }
+  .sub { color: var(--muted); font-size: .95rem; margin: 4px 0 36px; }
+  h2 { font-size: 1.15rem; margin: 34px 0 10px; letter-spacing: -.01em; }
+  p { margin: 0 0 14px; }
+  strong { color: #fff; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--card); border: 1px solid var(--hair); border-radius: 16px;
+    padding: 18px 22px; margin: 0 0 14px;
+  }
+  .card p { margin: 0; }
+  .q { font-weight: 600; color: #fff; margin: 0 0 6px; }
+  .faq { margin-top: 8px; }
+  .faq .card { margin-bottom: 12px; }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--hair); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <circle cx="12" cy="11" r="2"></circle><path d="M12 13v3"></path>
+      </svg>
+    </span>
+    <h1>PrivacyLLM Support</h1>
+  </header>
+  <p class="sub">A private AI assistant that runs entirely on your iPhone.</p>
+
+  <h2>Get help</h2>
+  <div class="card">
+    <p><strong>Email:</strong> <a href="mailto:axel@langenskiold.se">axel@langenskiold.se</a><br>
+    <strong>Report a bug or request a feature:</strong> <a href="https://github.com/axellangenskiold/PrivacyLLM/issues">open an issue on GitHub</a><br>
+    <strong>Privacy policy:</strong> <a href="../">privacy policy</a></p>
+  </div>
+
+  <h2>Common questions</h2>
+  <div class="faq">
+    <div class="card">
+      <p class="q">Why does the app download something on first run?</p>
+      <p>PrivacyLLM downloads the AI model's weight files once (over Wi‑Fi is recommended). After that, chatting works fully offline. Nothing about you is sent — it's a plain file download.</p>
+    </div>
+    <div class="card">
+      <p class="q">Which iPhone do I need?</p>
+      <p>A recent iPhone with enough memory. Smaller models run on most devices; the larger "Thinking" models need more RAM. The app recommends a model that fits your device.</p>
+    </div>
+    <div class="card">
+      <p class="q">Is anything sent to the internet?</p>
+      <p>Only two things, and only when you trigger them: the one‑time model download, and — if you turn web search on — short keyword queries to your chosen search engine. Your conversations, documents, and the model's reasoning never leave your device.</p>
+    </div>
+    <div class="card">
+      <p class="q">How do I delete my data?</p>
+      <p>Delete any conversation or document in‑app, or use <strong>Settings → Data</strong> to clear everything. Deleting the app removes all of its data.</p>
+    </div>
+  </div>
+
+  <footer>PrivacyLLM keeps your AI assistant where it belongs — on your device, in your hands.</footer>
+</div>
+</body>
+</html>
