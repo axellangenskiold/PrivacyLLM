@@ -274,4 +274,34 @@ struct ModelSortingTests {
         spec.releaseDate = nil
         #expect(spec.releaseDateValue == .distantPast)
     }
+
+    private func spec(_ id: String, params: String, ram: Int, date: String?) -> ModelSpec {
+        var spec = ModelSpec.previewFast
+        spec.id = id
+        spec.displayName = id
+        spec.parameterCount = params
+        spec.minRAMGB = ram
+        spec.releaseDate = date
+        return spec
+    }
+
+    @Test func sortsBySize() {
+        let specs = [
+            spec("a", params: "1B", ram: 4, date: "2025-01-01"),
+            spec("b", params: "7B", ram: 8, date: "2024-01-01"),
+            spec("c", params: "3B", ram: 6, date: "2026-01-01"),
+        ]
+        #expect(ModelSortOrder.parameterSize.sorted(specs).map(\.id) == ["b", "c", "a"])
+        #expect(ModelSortOrder.ram.sorted(specs).map(\.id) == ["b", "c", "a"])
+        #expect(ModelSortOrder.releaseDate.sorted(specs).map(\.id) == ["c", "a", "b"])
+    }
+
+    @Test func sortTieBreaksOnName() {
+        let specs = [
+            spec("Zephyr", params: "1B", ram: 4, date: nil),
+            spec("Atlas", params: "1B", ram: 4, date: nil),
+        ]
+        // Equal on every key → alphabetical, deterministically.
+        #expect(ModelSortOrder.parameterSize.sorted(specs).map(\.id) == ["Atlas", "Zephyr"])
+    }
 }

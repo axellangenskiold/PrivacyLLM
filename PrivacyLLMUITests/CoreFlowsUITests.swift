@@ -182,6 +182,24 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testModelManagerSortAndImportMenu() throws {
+        let app = launchApp()
+        app.buttons["App menu"].tap()
+        app.buttons["Models"].tap()
+        XCTAssertTrue(app.staticTexts["Mock Fast 1B"].waitForExistence(timeout: 5))
+
+        // The toolbar menu exposes both the sort options and the import affordance.
+        app.buttons["Sort and import models"].tap()
+        XCTAssertTrue(app.buttons["Import Model…"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["RAM required"].exists)
+        XCTAssertTrue(app.buttons["Newest"].exists)
+
+        // Choosing a sort order keeps the catalog on screen (no crash, list re-renders).
+        app.buttons["RAM required"].tap()
+        XCTAssertTrue(app.staticTexts["Mock Thinking 4B"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSettingsPrivacySurface() throws {
         let app = launchApp()
         app.buttons["App menu"].tap()

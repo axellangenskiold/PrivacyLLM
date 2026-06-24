@@ -5,50 +5,164 @@ on:
     branches: [main]
   pull_request:
 
+# Every push to main and every PR runs the full production gate. Superseded runs
+# on the same ref are cancelled to save runner minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: PrivacyLLM.xcodeproj
+  SCHEME: PrivacyLLM
+
 jobs:
-  build-and-test:
-    runs-on: macos-26
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Select newest Xcode 26
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
-
-      - name: Resolve packages
-        run: xcodebuild -resolvePackageDependencies -project PrivacyLLM.xcodeproj -scheme PrivacyLLM
-
-      - name: Pick a simulator
-        id: sim
-        run: |
-          UDID=$(xcrun simctl list devices available --json | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          candidates = [d for rt in sorted(devices, reverse=True) for d in devices[rt] if d["isAvailable"] and "iPhone" in d["name"]]
-          print(candidates[0]["udid"])')
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-
-      - name: Unit tests
-        run: |
-          xcodebuild test \
-            -project PrivacyLLM.xcodeproj \
-            -scheme PrivacyLLM \
-            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
-            -skipMacroValidation \
-            -only-testing PrivacyLLMTests \
-            CODE_SIGNING_ALLOWED=NO
-
   lint:
+    name: Lint
     runs-on: macos-26
-    timeout-minutes: 15
-    # Advisory until the lint toolchain is exercised locally; tighten after first green run.
-    continue-on-error: true
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
         run: brew install swiftlint swiftformat
-      - name: SwiftLint
+      # Blocking: the repo is verified clean under the CI config.
+      - name: SwiftLint (strict)
         run: swiftlint lint --strict --config .swiftlint-ci.yml
+      # Advisory: large pre-existing formatting debt; surfaced but not blocking.
       - name: SwiftFormat (lint only)
         continue-on-error: true
         run: swiftformat --lint .
+
+  unit-tests:
+    name: Unit tests
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode 26
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+      - name: Pick simulator
+        id: sim
+        run: ./.github/scripts/pick-simulator.sh
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipMacroValidation \
+            -only-testing PrivacyLLMTests \
+            -resultBundlePath TestResults-unit.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: TestResults-unit.xcresult
+          if-no-files-found: ignore
+
+  ui-tests:
+    name: UI tests
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode 26
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+      - name: Pick simulator
+        id: sim
+        run: ./.github/scripts/pick-simulator.sh
+      - name: Run UI tests
+        run: |
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipMacroValidation \
+            -only-testing PrivacyLLMUITests \
+            -resultBundlePath TestResults-ui.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: TestResults-ui.xcresult
+          if-no-files-found: ignore
+
+  floor-build:
+    name: Floor build (iOS 18)
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode 26
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+      - name: Pick iOS 18 simulator (install runtime if missing)
+        id: sim
+        run: |
+          # macos-26 ships the iOS 18 runtime via its bundled Xcode 16; use it
+          # directly, and only fall back to a download if the image ever drops it.
+          if ! ./.github/scripts/pick-simulator.sh 18; then
+            echo "iOS 18 runtime not preinstalled; attempting download…"
+            xcodebuild -downloadPlatform iOS -buildVersion 18.6 || xcodebuild -downloadPlatform iOS
+            ./.github/scripts/pick-simulator.sh 18
+          fi
+      # Proves the app still builds against the iOS 18.0 deployment floor.
+      - name: Build for iOS 18
+        run: |
+          xcodebuild build \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+  release-build:
+    name: Release build
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode 26
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)/Contents/Developer"
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+      # Release configuration for a real device target (unsigned): the same
+      # optimizer/settings as the shipping build, so a green here means the app
+      # compiles production-ready.
+      - name: Release build (generic iOS device)
+        run: |
+          xcodebuild build \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+  # Single required status check: turn this job's name on in branch protection
+  # for main and every gate above must pass before a merge or a green main.
+  ci:
+    name: CI passed
+    if: always()
+    needs: [lint, unit-tests, ui-tests, floor-build, release-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all gates passed
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Gate results: $results"
+          for result in $results; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A required CI gate did not succeed."
+              exit 1
+            fi
+          done
+          echo "All gates passed."

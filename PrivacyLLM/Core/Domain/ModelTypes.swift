@@ -82,4 +82,21 @@ nonisolated enum ModelSortOrder: String, CaseIterable, Identifiable, Sendable {
         case .ram: "memorychip"
         }
     }
+
+    /// Orders models by the chosen criterion, largest/newest/most-RAM first,
+    /// with display name as a stable tie-breaker.
+    func sorted(_ specs: [ModelSpec]) -> [ModelSpec] {
+        specs.sorted { lhs, rhs in
+            switch self {
+            case .parameterSize where lhs.parameterCountValue != rhs.parameterCountValue:
+                return lhs.parameterCountValue > rhs.parameterCountValue
+            case .releaseDate where lhs.releaseDateValue != rhs.releaseDateValue:
+                return lhs.releaseDateValue > rhs.releaseDateValue
+            case .ram where lhs.minRAMGB != rhs.minRAMGB:
+                return lhs.minRAMGB > rhs.minRAMGB
+            default:
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+        }
+    }
 }

@@ -22,13 +22,9 @@ final class ModelManagerViewModel {
 
     /// Catalog rows ordered by the chosen criterion (largest/newest/most RAM first).
     var sortedStates: [ModelState] {
-        states.sorted { lhs, rhs in
-            switch sortOrder {
-            case .parameterSize: lhs.spec.parameterCountValue > rhs.spec.parameterCountValue
-            case .releaseDate: lhs.spec.releaseDateValue > rhs.spec.releaseDateValue
-            case .ram: lhs.spec.minRAMGB > rhs.spec.minRAMGB
-            }
-        }
+        let order = sortOrder.sorted(states.map(\.spec)).map(\.id)
+        let index = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($1, $0) })
+        return states.sorted { (index[$0.id] ?? 0) < (index[$1.id] ?? 0) }
     }
 
     func importModel(displayName: String, from folder: URL) async {
