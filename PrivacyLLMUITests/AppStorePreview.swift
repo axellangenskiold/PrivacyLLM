@@ -1,9 +1,11 @@
+import Foundation
 import XCTest
 
-/// Drives one ~20s flow for an App Store *app preview* video. The simulator
+/// Drives one ~25s flow for an App Store *app preview* video. The simulator
 /// screen is recorded externally (Scripts/preview.sh) while this runs; the test
 /// only paces the on-screen action. Slow streaming makes the reasoning and reply
-/// type out visibly. Gated like AppStoreScreenshots so it never runs in CI.
+/// type out visibly, then the keyboard is dismissed to reveal the whole answer.
+/// Gated like AppStoreScreenshots so it never runs in CI.
 final class AppStorePreview: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -29,12 +31,26 @@ final class AppStorePreview: XCTestCase {
         let input = app.textFields["Message input"]
         XCTAssertTrue(input.waitForExistence(timeout: 5))
         input.tap()
-        input.typeText("Is this really private — and can you think it through?")
-        Thread.sleep(forTimeInterval: 1.0)
+        if app.buttons["Continue"].exists { app.buttons["Continue"].tap() } // keyboard intro
+        input.typeText("Is my data really private?")
+        Thread.sleep(forTimeInterval: 0.5)
         app.buttons["Send message"].tap()
 
-        // Watch the reasoning + reply stream in (slow stream keeps it visible).
-        _ = app.staticTexts["What works here"].waitForExistence(timeout: 40)
-        Thread.sleep(forTimeInterval: 3.0)
+        // Dismiss the keyboard immediately and re-pin so the reasoning + reply
+        // stream in full-screen and clean (the only keyboard moment is the brief
+        // typing above, which the end-trim drops). Pinning keeps auto-follow on.
+        let w = app.windows.firstMatch
+        var tries = 0
+        while app.keyboards.firstMatch.exists, tries < 4 {
+            w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+                .press(forDuration: 0.1, thenDragTo: w.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72)))
+            tries += 1
+        }
+        let jump = app.buttons["Scroll to latest"]
+        if jump.waitForExistence(timeout: 2) { jump.tap() }
+
+        // Watch the whole reply stream in, then hold on the final answer.
+        _ = app.staticTexts["Everything you type stays on this device."].waitForExistence(timeout: 45)
+        Thread.sleep(forTimeInterval: 4.0)
     }
 }
