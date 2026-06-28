@@ -1,0 +1,94 @@
+PrivacyLLM — App Review Information
+===================================
+
+
+2. DEVICES AND OPERATING SYSTEMS TESTED
+
+Tested across all iPhone models from iPhone 15 onward, running all supported
+operating systems (iOS 18.0 through the current iOS release). This includes:
+
+- iPhone 15, 15 Plus, 15 Pro, 15 Pro Max
+- iPhone 16, 16 Plus, 16 Pro, 16 Pro Max, 16e
+- iPhone 17, 17 Pro, 17 Pro Max
+
+On-device model inference (the core feature) was validated on physical
+hardware; the iOS Simulator runs a mock model because MLX requires a device
+GPU.
+
+
+3. PURPOSE, TARGET AUDIENCE, AND VALUE
+
+PrivacyLLM is a private AI assistant that runs entirely on the user's iPhone.
+
+The problem it solves: mainstream AI chat apps send your conversations,
+documents, and prompts to cloud servers. PrivacyLLM does the opposite — a
+small open-weights language model runs locally on the device's GPU, so chats,
+imported documents, voice input, and the model's reasoning never leave the
+phone. The app has no accounts and no servers.
+
+Target audience: privacy-conscious users and anyone handling sensitive
+information (for example legal, medical, journalism, or research), plus people
+who want a capable AI assistant that works offline. The value is the
+usefulness of a modern chat assistant with the data staying entirely on the
+user's device.
+
+
+4. SETUP AND ACCESS INSTRUCTIONS
+
+No account, login, or credentials are required — the app has no sign-in.
+
+1. Launch the app and complete the brief onboarding (privacy overview).
+2. On the model screen, download the recommended model (Qwen3.5 2B, about
+   1.8 GB). Use Wi-Fi; this one-time download is required before chatting.
+3. When the download finishes, type a message and send — the reply streams in.
+4. To exercise the main features: toggle Fast / Thinking in the top bar; tap
+   the globe to enable optional web search; tap the paperclip to import a PDF
+   and ask questions about it; tap the mic to dictate.
+5. Enabling Airplane Mode after the model is downloaded demonstrates that all
+   core features work fully offline.
+
+No sample files are needed — any PDF works for document Q&A. The optional
+"Donate" tips are in-app purchases that unlock nothing; the app is fully
+functional without them.
+
+
+5. EXTERNAL SERVICES USED
+
+All AI inference happens on-device; there is no third-party AI / LLM service,
+authentication service, analytics, or backend. The only external interactions
+are:
+
+- Hugging Face (huggingface.co): one-time download of open-weights model files
+  (data, not executable code). No user data or identity is sent.
+- DuckDuckGo (default search provider): used only if the user explicitly turns
+  web search on. It receives short keyword queries only — never conversation or
+  document content — and an on-screen indicator appears whenever a query is
+  sent. Search is OFF by default.
+- Apple on-device frameworks: Speech (dictation), Natural Language (on-device
+  document indexing), and MLX / Metal (model inference).
+- Apple StoreKit: optional consumable in-app tips. No third-party payment
+  processor.
+
+
+6. REGIONAL DIFFERENCES
+
+The app functions consistently across all regions. There are no region-locked
+features or content. The only network activity — the one-time model download
+and optional, user-initiated web search — behaves identically everywhere. The
+optional in-app tips use Apple's standard price tiers per storefront, but they
+unlock nothing and do not change functionality.
+
+
+7. REGULATED INDUSTRY / PROTECTED THIRD-PARTY MATERIAL
+
+The app is a general-purpose utility and does not operate in a regulated
+industry. The only third-party material is the open-weights AI models,
+downloaded from public mlx-community repositories under permissive licenses:
+
+- Qwen3.5 / Qwen3 (Apache-2.0) and Gemma 4 E2B (Apache-2.0): redistribution
+  permitted with attribution, shown in-app.
+- Llama 3.2 (Llama 3.2 Community License): used with the required "Built with
+  Llama" attribution and license displayed in-app.
+
+Each model's license name and link are shown on the Models screen. No other
+protected or licensed material is included.
