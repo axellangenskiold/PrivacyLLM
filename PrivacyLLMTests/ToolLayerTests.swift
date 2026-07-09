@@ -243,4 +243,53 @@ struct AgentLoopTests {
         #expect(sawErrorTool)
         #expect(completed?.content == "Sorry, here is a plain answer.")
     }
+
+    /// The orchestrator teaches the model *when* to search: with search on and
+    /// web_search registered, the system prompt carries the trigger rules.
+    @Test func searchGuidanceInjectedWhenSearchAvailable() async throws {
+        let database = try AppDatabase.inMemory()
+        let conversation = Conversation()
+        try await ConversationStore(database: database).insert(conversation)
+        let settings = SettingsStore(database: database)
+        try await settings.set(true, for: .searchEnabled)
+        let mock = MockInferenceService(tokenDelay: .milliseconds(1), scriptedReply: "ok")
+        let orchestrator = ChatOrchestrator(
+            inference: mock,
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            messageStore: MessageStore(database: database),
+            conversationStore: ConversationStore(database: database),
+            settingsStore: settings,
+            tools: [CalculatorTool(), WebSearchTool(search: MockSearchService())]
+        )
+
+        for await _ in await orchestrator.send(text: "who won brazil vs norway?", conversation: conversation, history: []) {}
+
+        let system = await mock.lastInput?.messages.first { $0.role == .system }
+        #expect(system?.content.contains("web_search tool") == true)
+        #expect(system?.content.contains("unsure") == true)
+    }
+
+    /// With search off the guidance flips: no web claim, admit staleness.
+    @Test func noWebGuidanceWhenSearchOff() async throws {
+        let database = try AppDatabase.inMemory()
+        let conversation = Conversation()
+        try await ConversationStore(database: database).insert(conversation)
+        let settings = SettingsStore(database: database)
+        try await settings.set(false, for: .searchEnabled)
+        let mock = MockInferenceService(tokenDelay: .milliseconds(1), scriptedReply: "ok")
+        let orchestrator = ChatOrchestrator(
+            inference: mock,
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            messageStore: MessageStore(database: database),
+            conversationStore: ConversationStore(database: database),
+            settingsStore: settings,
+            tools: [CalculatorTool(), WebSearchTool(search: MockSearchService())]
+        )
+
+        for await _ in await orchestrator.send(text: "who won brazil vs norway?", conversation: conversation, history: []) {}
+
+        let system = await mock.lastInput?.messages.first { $0.role == .system }
+        #expect(system?.content.contains("cannot access the web") == true)
+        #expect(system?.content.contains("web_search tool") == false)
+    }
 }

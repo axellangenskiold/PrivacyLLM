@@ -129,21 +129,24 @@ actor ChatOrchestrator {
             (try? await settingsStore.globalSystemPrompt()) ?? nil
         }
 
-        // Document Q&A (§3.4): retrieve before generating and ride the
-        // excerpts in the system prompt; short single docs go in whole.
-        let queryText = fullHistory.last(where: { $0.role == .user })?.content ?? ""
-        let docContext = await documentContext(for: queryText, conversationID: conversation.id)
-        let systemPrompt: String? = switch (basePrompt, docContext.block) {
-        case (nil, nil): nil
-        case (let prompt?, nil): prompt
-        case (nil, let block?): block
-        case (let prompt?, let block?): prompt + "\n\n" + block
-        }
-        let inference = inference
         let searchEnabled = (try? await settingsStore.searchEnabled()) ?? false
         let toolSpecs = spec.capabilities.toolCalling
             ? toolRouter.specs(includeEgressTools: searchEnabled)
             : []
+
+        // Document Q&A (§3.4): retrieve before generating and ride the
+        // excerpts in the system prompt; short single docs go in whole.
+        let queryText = fullHistory.last(where: { $0.role == .user })?.content ?? ""
+        let docContext = await documentContext(for: queryText, conversationID: conversation.id)
+        // Persona (custom/global) → behavior rules → document excerpts.
+        let systemPrompt = [
+            basePrompt,
+            Self.coreGuidance(canSearch: toolSpecs.contains { $0.name == "web_search" }),
+            docContext.block,
+        ]
+        .compactMap(\.self)
+        .joined(separator: "\n\n")
+        let inference = inference
 
         // Agent loop (TL-1/2): generate → run any tool calls → feed results
         // back as tool messages → resume, at most maxToolRounds times.
@@ -270,6 +273,26 @@ actor ChatOrchestrator {
 
     private static func rawBlock(for call: ToolCall) -> String {
         "<tool_call>{\"name\": \"\(call.name)\", \"arguments\": \(call.argumentsJSON)}</tool_call>"
+    }
+
+    /// Always-on behavior rules appended to the system prompt. Small on-device
+    /// models don't infer *when* to reach for a tool from the schema listing
+    /// alone, so when web_search is available this spells out the trigger cases
+    /// (time-sensitive facts, uncertainty); when it isn't, the model is told to
+    /// admit staleness instead of guessing. The current date anchors "recent".
+    private static func coreGuidance(canSearch: Bool) -> String {
+        let today = Date.now.formatted(date: .abbreviated, time: .omitted)
+        if canSearch {
+            return """
+            Today is \(today).
+            Use the web_search tool before answering when the question involves recent events or facts that change over time — news, sports results, scores, prices, weather, schedules, product releases, or anything "latest", "current", or after your training data — and whenever you are unsure of a fact. Search with 2-5 keywords (example: {"query": "brazil norway result"}), then answer using only the results and cite them. Never answer about current events from memory.
+            Answer directly without searching for general knowledge, math, code, and questions about the user's attached documents.
+            """
+        }
+        return """
+        Today is \(today).
+        You cannot access the web. If an answer may have changed since your training data, or you are unsure of a fact, say so plainly instead of guessing.
+        """
     }
 
     /// Builds the document-context block for this turn (FR-27, §3.4).
