@@ -1,5 +1,6 @@
 import PrivacyUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Composer for a new voice memo: paste text (or arrive prefilled from a
 /// forwarded conversation), pick a voice-quality tier, and generate the audio
@@ -18,6 +19,7 @@ struct NewVoiceMemoView: View {
     @State private var qualities: [TTSQuality] = [.standard]
     @State private var isGenerating = false
     @State private var errorMessage: String?
+    @State private var showPDFImporter = false
 
     var body: some View {
         NavigationStack {
@@ -27,6 +29,9 @@ struct NewVoiceMemoView: View {
             }
             .scrollContentBackground(.hidden)
             .pvScreen()
+            .fileImporter(isPresented: $showPDFImporter, allowedContentTypes: [UTType.pdf]) { result in
+                importPDF(result)
+            }
             .navigationTitle(fromConversation ? "Conversation to Audio" : "New Voice Memo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -62,12 +67,22 @@ struct NewVoiceMemoView: View {
             }
             .pvListRow()
         } else {
-            Section("Text") {
+            Section {
                 TextEditor(text: $text)
                     .frame(minHeight: 160)
                     .disabled(isGenerating)
                 TextField("Title (optional)", text: $title)
                     .disabled(isGenerating)
+                Button {
+                    showPDFImporter = true
+                } label: {
+                    Label("Import from PDF…", systemImage: "doc.text")
+                }
+                .disabled(isGenerating)
+            } header: {
+                Text("Text")
+            } footer: {
+                Text("Paste text, or import a PDF to read it aloud.")
             }
             .pvListRow()
         }
@@ -101,6 +116,24 @@ struct NewVoiceMemoView: View {
     private var canGenerate: Bool {
         if fromConversation { return !draft.isEmpty }
         return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Extracts a PDF's text into the editor. ponytail: synchronous PDFKit read
+    /// on the main actor — fine for typical docs; move off-main if big PDFs stall.
+    private func importPDF(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else { return }
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let pages = try PDFExtractor.extract(from: url, maxPages: 30)
+            text = pages.map(\.text).joined(separator: "\n\n")
+            if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                title = url.deletingPathExtension().lastPathComponent
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = DocumentsViewModel.message(for: error)
+        }
     }
 
     private func generate() async {
