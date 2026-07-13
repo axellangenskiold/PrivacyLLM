@@ -3,6 +3,7 @@ import SwiftUI
 
 nonisolated enum AppRoute: Hashable {
     case chat(Conversation)
+    case voiceMemos
     case models
     case documents
     case settings
@@ -57,6 +58,13 @@ struct ConversationListView: View {
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
+                            path.append(.voiceMemos)
+                        } label: {
+                            Label("Voice Memos", systemImage: "waveform")
+                        }
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
                             createAndOpen()
                         } label: {
                             Label("New Chat", systemImage: "square.and.pencil")
@@ -67,6 +75,8 @@ struct ConversationListView: View {
                     switch route {
                     case .chat(let conversation):
                         ChatView(conversation: conversation, environment: environment)
+                    case .voiceMemos:
+                        VoiceMemoListView(environment: environment)
                     case .models:
                         ModelManagerView(environment: environment)
                     case .documents:

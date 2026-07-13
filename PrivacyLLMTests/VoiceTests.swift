@@ -41,66 +41,84 @@ struct VoiceServiceTests {
 
 @MainActor
 struct VoiceInputFlowTests {
-    /// TR-10: mocked recognizer → live partials and the final transcript land
-    /// in the input field for review, never auto-sent (FR-33/34).
-    @Test func transcriptFlowsIntoDraftWithoutSending() async throws {
+    private func makeViewModel(script: [String]) async throws -> ChatViewModel {
         let environment = AppEnvironment(
             database: try AppDatabase.inMemory(),
             inference: MockInferenceService(tokenDelay: .milliseconds(1)),
             modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
             search: MockSearchService(),
             documents: MockDocumentService(),
-            voice: MockVoiceService(script: ["What is", "What is the weather"], partialDelay: .milliseconds(5))
+            voice: MockVoiceService(script: script, partialDelay: .milliseconds(5))
         )
         let conversation = Conversation()
         try await environment.conversationStore.insert(conversation)
-        let viewModel = ChatViewModel(conversation: conversation, environment: environment)
+        return ChatViewModel(conversation: conversation, environment: environment)
+    }
 
-        viewModel.toggleRecording()
-        // Wait for recording to start and partials to arrive.
-        for _ in 0..<100 where !viewModel.isRecording {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        #expect(viewModel.isRecording)
-        for _ in 0..<100 where viewModel.draft.isEmpty {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+    /// TR-10 / FR-34: the finished transcript is held for review (never
+    /// auto-sent), then sends on demand.
+    @Test func transcriptHeldForReviewThenSends() async throws {
+        let viewModel = try await makeViewModel(script: ["What is", "What is the weather"])
 
-        viewModel.toggleRecording()
-        for _ in 0..<100 where viewModel.isRecording {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        viewModel.startVoiceRecording()
+        try await until { viewModel.isRecording }
+        try await until { !viewModel.liveTranscript.isEmpty }
 
-        #expect(viewModel.draft == "What is the weather")
-        #expect(viewModel.isRecording == false)
-        // Review-before-send: nothing was sent (FR-34).
-        #expect(viewModel.messages.isEmpty)
-        #expect(viewModel.phase == .idle)
+        viewModel.finishVoiceRecording()
+        try await until { !viewModel.isRecording }
+
+        #expect(viewModel.pendingVoiceTranscript == "What is the weather")
+        #expect(viewModel.draft.isEmpty)
+        #expect(viewModel.messages.isEmpty) // nothing sent yet (FR-34)
+
+        viewModel.sendVoiceTranscript()
+        #expect(viewModel.pendingVoiceTranscript == nil)
+        try await until { viewModel.messages.contains { $0.role == .user } }
+        #expect(viewModel.messages.first(where: { $0.role == .user })?.content == "What is the weather")
     }
 
     @Test func dictationAppendsToExistingDraft() async throws {
-        let environment = AppEnvironment(
-            database: try AppDatabase.inMemory(),
-            inference: MockInferenceService(tokenDelay: .milliseconds(1)),
-            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
-            search: MockSearchService(),
-            documents: MockDocumentService(),
-            voice: MockVoiceService(script: ["tomorrow"], partialDelay: .milliseconds(5))
-        )
-        let conversation = Conversation()
-        try await environment.conversationStore.insert(conversation)
-        let viewModel = ChatViewModel(conversation: conversation, environment: environment)
+        let viewModel = try await makeViewModel(script: ["tomorrow"])
         viewModel.draft = "Remind me"
 
-        viewModel.toggleRecording()
-        for _ in 0..<100 where !viewModel.isRecording {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        viewModel.toggleRecording()
-        for _ in 0..<100 where viewModel.isRecording {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        viewModel.startVoiceRecording()
+        try await until { viewModel.isRecording }
+        viewModel.finishVoiceRecording()
+        try await until { !viewModel.isRecording }
 
-        #expect(viewModel.draft == "Remind me tomorrow")
+        #expect(viewModel.pendingVoiceTranscript == "Remind me tomorrow")
+    }
+
+    /// FR-33: a pause in speech auto-stops dictation with no manual tap.
+    @Test func silenceAutoStopsRecording() async throws {
+        let viewModel = try await makeViewModel(script: ["a", "ab", "abc"])
+        viewModel.silenceTimeout = .milliseconds(80)
+
+        viewModel.startVoiceRecording()
+        try await until { !viewModel.isRecording && viewModel.pendingVoiceTranscript != nil }
+
+        #expect(viewModel.pendingVoiceTranscript == "abc")
+    }
+
+    @Test func cancelDiscardsTranscript() async throws {
+        let viewModel = try await makeViewModel(script: ["a", "ab", "abc"])
+
+        viewModel.startVoiceRecording()
+        try await until { viewModel.isRecording }
+        try await until { !viewModel.liveTranscript.isEmpty }
+        viewModel.cancelVoiceRecording()
+        try await until { !viewModel.isRecording }
+
+        #expect(viewModel.pendingVoiceTranscript == nil)
+        #expect(viewModel.draft.isEmpty)
+    }
+
+    /// Polls until `condition` holds or times out — no fixed sleeps.
+    private func until(_ condition: () -> Bool, timeout: Duration = .seconds(3)) async throws {
+        let start = ContinuousClock.now
+        while !condition() {
+            if start.duration(to: .now) > timeout { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
     }
 }

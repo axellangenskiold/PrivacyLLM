@@ -2,6 +2,26 @@ import Foundation
 import Observation
 import UIKit
 
+/// Snapshot shown in the Session Info sheet (FR-24): the model's context window
+/// with live usage, plus cumulative token and web-search counts.
+nonisolated struct SessionStats: Sendable, Equatable {
+    var modelName: String
+    var contextWindow: Int
+    var contextUsed: Int
+    var promptTokensTotal: Int
+    var completionTokensTotal: Int
+    var webSearchCount: Int
+    var lastTokensPerSecond: Double?
+
+    var usageFraction: Double {
+        contextWindow > 0 ? min(1, Double(contextUsed) / Double(contextWindow)) : 0
+    }
+
+    /// True once the conversation no longer fits: older turns are automatically
+    /// dropped from the model's context to keep replies accurate (autocompact).
+    var isCompacting: Bool { contextWindow > 0 && contextUsed >= contextWindow }
+}
+
 @Observable
 final class ChatViewModel {
     enum Phase: Equatable {
@@ -132,55 +152,173 @@ final class ChatViewModel {
 
     private(set) var isRecording = false
     private(set) var voicePermissionDenied = false
-    private var dictationBase = ""
+    /// Live transcript shown in place of the text field while recording.
+    private(set) var liveTranscript = ""
+    /// Captured transcript awaiting the user's review-then-send (FR-34); nil
+    /// unless a recording just finished with speech in it.
+    private(set) var pendingVoiceTranscript: String?
+    /// Pause in speech after which dictation auto-stops (FR-33). Overridable in tests.
+    var silenceTimeout: Duration = .seconds(2)
 
-    func toggleRecording() {
-        if isRecording {
-            let voice = environment.voice
-            Task { await voice.stopTranscribing() }
-        } else {
-            startRecording()
+    private var dictationBase = ""
+    private var recordingCancelled = false
+    private var silenceTask: Task<Void, Never>?
+
+    func startVoiceRecording() {
+        guard !isRecording, phase == .idle else { return }
+        voicePermissionDenied = false
+        pendingVoiceTranscript = nil
+        recordingCancelled = false
+        // Dictation continues whatever was already typed (FR-34).
+        dictationBase = draft.isEmpty ? "" : draft + " "
+        draft = ""
+        Task { await runRecording() }
+    }
+
+    private func runRecording() async {
+        let availability = await environment.voice.requestAuthorization()
+        switch availability {
+        case .available:
+            break
+        case .denied, .restricted:
+            voicePermissionDenied = true
+            return
+        case .permissionNotDetermined:
+            return
+        case .unsupported:
+            errorMessage = String(localized: "On-device dictation isn't available on this device or language.")
+            return
+        }
+
+        isRecording = true
+        liveTranscript = dictationBase
+        do {
+            let stream = try await environment.voice.startTranscribing()
+            for try await transcript in stream {
+                switch transcript {
+                case .partial(let text), .final(let text):
+                    liveTranscript = dictationBase + text
+                    armSilenceTimer()
+                }
+            }
+        } catch {
+            errorMessage = String(localized: "Dictation failed. Try again.")
+        }
+        silenceTask?.cancel()
+        isRecording = false
+        finalizeRecording()
+    }
+
+    /// Restarts the "no speech" countdown; fires once speech pauses (FR-33).
+    private func armSilenceTimer() {
+        silenceTask?.cancel()
+        let timeout = silenceTimeout
+        silenceTask = Task {
+            try? await Task.sleep(for: timeout)
+            guard !Task.isCancelled else { return }
+            self.finishVoiceRecording()
         }
     }
 
-    private func startRecording() {
-        guard !isRecording, phase == .idle else { return }
-        voicePermissionDenied = false
-        Task {
-            let availability = await environment.voice.requestAuthorization()
-            switch availability {
-            case .available:
-                break
-            case .denied, .restricted:
-                voicePermissionDenied = true
-                return
-            case .permissionNotDetermined:
-                return
-            case .unsupported:
-                errorMessage = String(localized: "On-device dictation isn't available on this device or language.")
-                return
-            }
+    /// Ends capture and keeps the transcript for review (silence auto-stop, or
+    /// the user tapping done).
+    func finishVoiceRecording() {
+        guard isRecording else { return }
+        silenceTask?.cancel()
+        let voice = environment.voice
+        Task { await voice.stopTranscribing() }
+    }
 
-            // Dictation appends to whatever was already typed (FR-34).
-            dictationBase = draft.isEmpty ? "" : draft + " "
-            isRecording = true
-            do {
-                let stream = try await environment.voice.startTranscribing()
-                for try await transcript in stream {
-                    switch transcript {
-                    case .partial(let text), .final(let text):
-                        draft = dictationBase + text
-                    }
-                }
-            } catch {
-                errorMessage = String(localized: "Dictation failed. Try again.")
-            }
-            isRecording = false
+    /// Discards an in-progress recording without keeping the transcript.
+    func cancelVoiceRecording() {
+        guard isRecording else { return }
+        recordingCancelled = true
+        silenceTask?.cancel()
+        let voice = environment.voice
+        Task { await voice.stopTranscribing() }
+    }
+
+    private func finalizeRecording() {
+        let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        liveTranscript = ""
+        guard !recordingCancelled, !text.isEmpty else {
+            // Cancelled or silent: restore whatever had been typed before.
+            recordingCancelled = false
+            draft = dictationBase.trimmingCharacters(in: .whitespacesAndNewlines)
+            return
         }
+        pendingVoiceTranscript = text
+    }
+
+    /// Commits the reviewed transcript and sends it (FR-34).
+    func sendVoiceTranscript() {
+        guard let text = pendingVoiceTranscript else { return }
+        pendingVoiceTranscript = nil
+        draft = text
+        send()
+    }
+
+    /// Moves the transcript into the editable field instead of sending it.
+    func editVoiceTranscript() {
+        guard let text = pendingVoiceTranscript else { return }
+        pendingVoiceTranscript = nil
+        draft = text
+    }
+
+    /// Throws away the reviewed transcript without sending.
+    func discardVoiceTranscript() {
+        pendingVoiceTranscript = nil
+        draft = ""
     }
 
     func dismissVoicePermissionHelp() {
         voicePermissionDenied = false
+    }
+
+    // MARK: Session info (FR-24)
+
+    /// Snapshot for the Session Info sheet: the active model's context window +
+    /// live usage, and cumulative token / web-search counts for this chat.
+    func sessionStats() async -> SessionStats {
+        let spec = downloadedModels.first { $0.id == activeModelID }
+        let userCap = (try? await environment.settingsStore.contextLength()) ?? 0
+        let window = spec?.resolvedContextLength(userCap: userCap) ?? (userCap > 0 ? userCap : 4096)
+
+        var prompt = 0, completion = 0, searches = 0
+        var lastTPS: Double?
+        for message in messages where message.role == .assistant {
+            prompt += message.stats?.promptTokens ?? 0
+            completion += message.stats?.completionTokens ?? 0
+            searches += message.stats?.webSearchCount ?? 0
+            if let tps = message.stats?.tokensPerSecond { lastTPS = tps }
+        }
+        return SessionStats(
+            modelName: spec?.displayName ?? String(localized: "No model"),
+            contextWindow: window,
+            contextUsed: await currentContextTokens(),
+            promptTokensTotal: prompt,
+            completionTokensTotal: completion,
+            webSearchCount: searches,
+            lastTokensPerSecond: lastTPS
+        )
+    }
+
+    /// Approximate tokens the current conversation occupies — the live context
+    /// fill. Uses the loaded model's tokenizer when available, else chars/token.
+    private func currentContextTokens() async -> Int {
+        let inference = environment.inference
+        func count(_ text: String) async -> Int {
+            if let exact = await inference.countTokens(text) { return exact }
+            return max(1, text.count / 4)
+        }
+        var total = 0
+        if let persona = conversation.systemPrompt, !persona.isEmpty {
+            total += await count(persona)
+        }
+        for message in messages where message.role != .attachment {
+            total += await count(message.content)
+        }
+        return total
     }
 
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.

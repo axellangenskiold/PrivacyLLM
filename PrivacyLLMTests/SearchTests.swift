@@ -186,6 +186,8 @@ struct SearchPipelineTests {
         #expect(completed?.content.contains("Swift 6 shipped") == true)
         #expect(completed?.sources.isEmpty == false)
         #expect(completed?.sources.allSatisfy { $0.kind == .web } == true)
+        // FR-24: the search is counted for the Session Info sheet.
+        #expect(completed?.stats?.webSearchCount == 1)
 
         // Citations survive persistence (FR-20).
         let persisted = try await MessageStore(database: database).fetchAll(conversationID: conversation.id)

@@ -12,6 +12,8 @@ final class AppEnvironment {
     let search: any SearchServicing
     let documents: any DocumentServicing
     let voice: any VoiceServicing
+    let tts: any TTSServicing
+    let voiceMemoDirectory: URL
     let egressMonitor: EgressMonitor
     /// Mirrors the persisted appearance setting so theme changes apply live (FR-39).
     var appearance = AppearanceSetting.system
@@ -22,7 +24,9 @@ final class AppEnvironment {
         modelManager: any ModelManaging,
         search: (any SearchServicing)? = nil,
         documents: any DocumentServicing,
-        voice: any VoiceServicing
+        voice: any VoiceServicing,
+        tts: (any TTSServicing)? = nil,
+        voiceMemoDirectory: URL? = nil
     ) {
         self.database = database
         self.inference = inference
@@ -35,7 +39,11 @@ final class AppEnvironment {
         )
         self.documents = documents
         self.voice = voice
+        self.tts = tts ?? AVSpeechTTSService()
+        self.voiceMemoDirectory = voiceMemoDirectory ?? URL.applicationSupportDirectory.appending(path: "VoiceMemos")
     }
+
+    var voiceMemoStore: VoiceMemoStore { VoiceMemoStore(directory: voiceMemoDirectory) }
 
     /// Tools available to the agent loop; the search tool reaches the network
     /// only through the gated SearchServicing (TL-4).
@@ -106,7 +114,9 @@ final class AppEnvironment {
             modelManager: modelManager ?? MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
             search: MockSearchService(),
             documents: MockDocumentService(),
-            voice: MockVoiceService()
+            voice: MockVoiceService(),
+            tts: MockTTSService(),
+            voiceMemoDirectory: FileManager.default.temporaryDirectory.appending(path: "VoiceMemos-\(UUID().uuidString)")
         )
     }
 }

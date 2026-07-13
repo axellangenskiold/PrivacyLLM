@@ -85,6 +85,7 @@ struct SettingsView: View {
                     }
                 }
                 Picker("Context length", selection: $viewModel.contextLength) {
+                    Text("Auto (match model)").tag(0)
                     ForEach([2048, 4096, 8192], id: \.self) { value in
                         Text("\(value)").tag(value)
                     }
@@ -92,7 +93,7 @@ struct SettingsView: View {
             } header: {
                 Text("Model")
             } footer: {
-                Text("Higher temperature means more varied replies. Longer context remembers more but uses more memory.")
+                Text("Higher temperature means more varied replies. Auto sizes context to the model and your device's memory; a fixed value caps it lower to save memory.")
             }
             .pvListRow()
 

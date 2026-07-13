@@ -122,7 +122,7 @@ actor ChatOrchestrator {
             return
         }
 
-        let config = await generationConfig()
+        let config = await generationConfig(spec: spec)
         let basePrompt: String? = if let custom = conversation.systemPrompt, !custom.isEmpty {
             custom
         } else {
@@ -156,6 +156,7 @@ actor ChatOrchestrator {
         var collectedSources: [SourceAttribution] = docContext.sources
         var stats: GenerationStats?
         var failureReason: String?
+        var webSearchCount = 0
 
         for round in 0...Self.maxToolRounds {
             var thinkParser = ThinkStreamParser()
@@ -230,6 +231,7 @@ actor ChatOrchestrator {
                 continuation.yield(.toolStarted(name: name))
                 let result = await toolRouter.execute(parsed)
                 collectedSources += result.sources
+                if name == "web_search" { webSearchCount += 1 }
                 continuation.yield(.toolFinished(name: name, isError: result.isError))
                 workingHistory.append(Message(
                     conversationID: conversation.id,
@@ -247,6 +249,11 @@ actor ChatOrchestrator {
             return
         }
 
+        if webSearchCount > 0 {
+            var merged = stats ?? GenerationStats()
+            merged.webSearchCount = webSearchCount
+            stats = merged
+        }
         let trimmedReasoning = reasoning.trimmingCharacters(in: .whitespacesAndNewlines)
         let assistantMessage = Message(
             conversationID: conversation.id,
@@ -365,13 +372,13 @@ actor ChatOrchestrator {
         return (spec, directory)
     }
 
-    private func generationConfig() async -> GenerationConfig {
+    private func generationConfig(spec: ModelSpec) async -> GenerationConfig {
         let sampling = (try? await settingsStore.sampling()) ?? SamplingParams()
-        let contextLength = (try? await settingsStore.contextLength()) ?? 4096
+        let userCap = (try? await settingsStore.contextLength()) ?? 0
         let role = (try? await settingsStore.value(for: .activeRole, default: ModelRole.fast)) ?? .fast
         return GenerationConfig(
             sampling: sampling,
-            contextLength: contextLength,
+            contextLength: spec.resolvedContextLength(userCap: userCap),
             thinkingEnabled: role == .thinking
         )
     }

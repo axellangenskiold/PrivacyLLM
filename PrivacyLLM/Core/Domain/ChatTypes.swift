@@ -59,17 +59,22 @@ nonisolated struct GenerationStats: Hashable, Codable, Sendable {
     var completionTokens: Int?
     var tokensPerSecond: Double?
     var firstTokenSeconds: Double?
+    /// Web searches the model ran during this turn (FR-24 session info). Optional
+    /// so older persisted messages decode without it.
+    var webSearchCount: Int?
 
     init(
         promptTokens: Int? = nil,
         completionTokens: Int? = nil,
         tokensPerSecond: Double? = nil,
-        firstTokenSeconds: Double? = nil
+        firstTokenSeconds: Double? = nil,
+        webSearchCount: Int? = nil
     ) {
         self.promptTokens = promptTokens
         self.completionTokens = completionTokens
         self.tokensPerSecond = tokensPerSecond
         self.firstTokenSeconds = firstTokenSeconds
+        self.webSearchCount = webSearchCount
     }
 }
 

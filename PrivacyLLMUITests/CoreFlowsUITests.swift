@@ -222,6 +222,39 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testVoiceMemoGenerationFlow() throws {
+        let app = launchApp()
+        // Entry point sits next to New Chat on the main screen.
+        app.buttons["Voice Memos"].firstMatch.tap()
+
+        // Open the composer, type text, and generate (mock TTS is instant).
+        app.buttons["New Voice Memo"].firstMatch.tap()
+        let editor = app.textViews.firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        editor.tap()
+        editor.typeText("Hello world memo")
+        app.buttons["Generate"].tap()
+
+        // The generated memo lands in the library with a play control.
+        XCTAssertTrue(app.staticTexts["Hello world memo"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Play"].firstMatch.exists)
+    }
+
+    @MainActor
+    func testSessionInfoSheetShowsContext() throws {
+        let app = launchApp()
+        app.buttons["New Chat"].firstMatch.tap()
+        XCTAssertTrue(app.textFields["Message input"].waitForExistence(timeout: 5))
+
+        app.buttons["Conversation options"].tap()
+        app.buttons["Session Info"].tap()
+
+        // The sheet surfaces the context window and cumulative token counts.
+        XCTAssertTrue(app.staticTexts["Context used"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Tokens generated"].exists)
+    }
+
+    @MainActor
     func testChatSurvivesHugeDynamicType() throws {
         let app = launchApp(extraArguments: [
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL",
