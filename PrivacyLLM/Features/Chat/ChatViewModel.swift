@@ -2,6 +2,26 @@ import Foundation
 import Observation
 import UIKit
 
+/// Snapshot shown in the Session Info sheet (FR-24): the model's context window
+/// with live usage, plus cumulative token and web-search counts.
+nonisolated struct SessionStats: Sendable, Equatable {
+    var modelName: String
+    var contextWindow: Int
+    var contextUsed: Int
+    var promptTokensTotal: Int
+    var completionTokensTotal: Int
+    var webSearchCount: Int
+    var lastTokensPerSecond: Double?
+
+    var usageFraction: Double {
+        contextWindow > 0 ? min(1, Double(contextUsed) / Double(contextWindow)) : 0
+    }
+
+    /// True once the conversation no longer fits: older turns are automatically
+    /// dropped from the model's context to keep replies accurate (autocompact).
+    var isCompacting: Bool { contextWindow > 0 && contextUsed >= contextWindow }
+}
+
 @Observable
 final class ChatViewModel {
     enum Phase: Equatable {
@@ -253,6 +273,52 @@ final class ChatViewModel {
 
     func dismissVoicePermissionHelp() {
         voicePermissionDenied = false
+    }
+
+    // MARK: Session info (FR-24)
+
+    /// Snapshot for the Session Info sheet: the active model's context window +
+    /// live usage, and cumulative token / web-search counts for this chat.
+    func sessionStats() async -> SessionStats {
+        let spec = downloadedModels.first { $0.id == activeModelID }
+        let userCap = (try? await environment.settingsStore.contextLength()) ?? 0
+        let window = spec?.resolvedContextLength(userCap: userCap) ?? (userCap > 0 ? userCap : 4096)
+
+        var prompt = 0, completion = 0, searches = 0
+        var lastTPS: Double?
+        for message in messages where message.role == .assistant {
+            prompt += message.stats?.promptTokens ?? 0
+            completion += message.stats?.completionTokens ?? 0
+            searches += message.stats?.webSearchCount ?? 0
+            if let tps = message.stats?.tokensPerSecond { lastTPS = tps }
+        }
+        return SessionStats(
+            modelName: spec?.displayName ?? String(localized: "No model"),
+            contextWindow: window,
+            contextUsed: await currentContextTokens(),
+            promptTokensTotal: prompt,
+            completionTokensTotal: completion,
+            webSearchCount: searches,
+            lastTokensPerSecond: lastTPS
+        )
+    }
+
+    /// Approximate tokens the current conversation occupies — the live context
+    /// fill. Uses the loaded model's tokenizer when available, else chars/token.
+    private func currentContextTokens() async -> Int {
+        let inference = environment.inference
+        func count(_ text: String) async -> Int {
+            if let exact = await inference.countTokens(text) { return exact }
+            return max(1, text.count / 4)
+        }
+        var total = 0
+        if let persona = conversation.systemPrompt, !persona.isEmpty {
+            total += await count(persona)
+        }
+        for message in messages where message.role != .attachment {
+            total += await count(message.content)
+        }
+        return total
     }
 
     /// One-tap Fast/Thinking switch (FR-15); the next turn loads the new role's model.

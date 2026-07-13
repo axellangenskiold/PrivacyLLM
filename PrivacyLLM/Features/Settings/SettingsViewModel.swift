@@ -27,7 +27,8 @@ final class SettingsViewModel {
         didSet { persistSampling(ifChanged: oldValue != maxTokens) }
     }
 
-    var contextLength = 4096 {
+    /// 0 = Auto (match the model, RAM-capped); a positive value caps it lower.
+    var contextLength = 0 {
         didSet { persist(contextLength, for: .contextLength, ifChanged: oldValue != contextLength) }
     }
 
@@ -73,7 +74,7 @@ final class SettingsViewModel {
         temperature = sampling.temperature
         topP = sampling.topP
         maxTokens = sampling.maxTokens
-        contextLength = (try? await settings.contextLength()) ?? 4096
+        contextLength = (try? await settings.contextLength()) ?? 0
         appearance = (try? await settings.value(for: .appearance, default: AppearanceSetting.system)) ?? .system
         await refreshModels()
         await refreshEgressEvents()

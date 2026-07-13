@@ -13,6 +13,7 @@ struct ChatView: View {
     @State private var showSystemPrompt = false
     @State private var systemPromptText = ""
     @State private var showAttachImporter = false
+    @State private var showSessionInfo = false
     /// Follows the live tail only while the user is at the bottom; scrolling
     /// up during generation stops the auto-scroll so earlier text is readable.
     @State private var isPinnedToBottom = true
@@ -72,6 +73,11 @@ struct ChatView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
+                        showSessionInfo = true
+                    } label: {
+                        Label("Session Info", systemImage: "chart.bar")
+                    }
+                    Button {
                         systemPromptText = viewModel.conversation.systemPrompt ?? ""
                         showSystemPrompt = true
                     } label: {
@@ -104,6 +110,9 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showSystemPrompt) {
             systemPromptSheet
+        }
+        .sheet(isPresented: $showSessionInfo) {
+            SessionInfoView(viewModel: viewModel)
         }
         .task { await viewModel.loadMessages() }
         .onReceive(

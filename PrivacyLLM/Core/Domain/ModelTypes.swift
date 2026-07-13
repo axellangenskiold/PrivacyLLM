@@ -49,6 +49,19 @@ nonisolated struct ModelSpec: Identifiable, Hashable, Codable, Sendable {
         return Double(digits) ?? 0
     }
 
+    /// The context window actually used on-device: the model's trained window,
+    /// capped to a RAM-safe ceiling so the KV cache can't exhaust memory, and
+    /// optionally lowered by a user-set cap (`userCap > 0`; 0 means "auto").
+    /// ponytail: coarse two-tier RAM cap — refine per-model if OOMs show up.
+    func resolvedContextLength(
+        userCap: Int = 0,
+        physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        let ramCap = physicalMemoryBytes >= 6 * 1_073_741_824 ? 8192 : 4096
+        let ceiling = userCap > 0 ? min(userCap, ramCap) : ramCap
+        return min(contextLength, ceiling)
+    }
+
     /// `releaseDate` parsed for sorting; undated models sort oldest.
     var releaseDateValue: Date {
         guard let releaseDate else { return .distantPast }

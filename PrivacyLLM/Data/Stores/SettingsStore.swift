@@ -53,8 +53,10 @@ nonisolated struct SettingsStore: Sendable {
         try await value(for: .sampling, default: SamplingParams())
     }
 
+    /// 0 means "Auto" — derive the window from the active model (RAM-capped).
+    /// A positive value is a manual cap the user chose.
     func contextLength() async throws -> Int {
-        try await value(for: .contextLength, default: 4096)
+        try await value(for: .contextLength, default: 0)
     }
 
     func globalSystemPrompt() async throws -> String? {
