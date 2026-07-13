@@ -14,6 +14,7 @@ struct ChatView: View {
     @State private var systemPromptText = ""
     @State private var showAttachImporter = false
     @State private var showSessionInfo = false
+    @State private var showVoiceMemoComposer = false
     /// Follows the live tail only while the user is at the bottom; scrolling
     /// up during generation stops the auto-scroll so earlier text is readable.
     @State private var isPinnedToBottom = true
@@ -94,6 +95,11 @@ struct ChatView: View {
                     } label: {
                         Label("Copy as Text", systemImage: "doc.on.doc")
                     }
+                    Button {
+                        showVoiceMemoComposer = true
+                    } label: {
+                        Label("Convert to Voice Memo", systemImage: "waveform")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -113,6 +119,13 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showSessionInfo) {
             SessionInfoView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showVoiceMemoComposer) {
+            NewVoiceMemoView(
+                environment: environment,
+                draft: VoiceMemoDraft.fromConversation(viewModel.conversation, messages: viewModel.messages),
+                fromConversation: true
+            )
         }
         .task { await viewModel.loadMessages() }
         .onReceive(
