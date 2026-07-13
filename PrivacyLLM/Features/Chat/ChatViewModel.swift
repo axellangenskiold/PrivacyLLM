@@ -132,51 +132,123 @@ final class ChatViewModel {
 
     private(set) var isRecording = false
     private(set) var voicePermissionDenied = false
-    private var dictationBase = ""
+    /// Live transcript shown in place of the text field while recording.
+    private(set) var liveTranscript = ""
+    /// Captured transcript awaiting the user's review-then-send (FR-34); nil
+    /// unless a recording just finished with speech in it.
+    private(set) var pendingVoiceTranscript: String?
+    /// Pause in speech after which dictation auto-stops (FR-33). Overridable in tests.
+    var silenceTimeout: Duration = .seconds(2)
 
-    func toggleRecording() {
-        if isRecording {
-            let voice = environment.voice
-            Task { await voice.stopTranscribing() }
-        } else {
-            startRecording()
+    private var dictationBase = ""
+    private var recordingCancelled = false
+    private var silenceTask: Task<Void, Never>?
+
+    func startVoiceRecording() {
+        guard !isRecording, phase == .idle else { return }
+        voicePermissionDenied = false
+        pendingVoiceTranscript = nil
+        recordingCancelled = false
+        // Dictation continues whatever was already typed (FR-34).
+        dictationBase = draft.isEmpty ? "" : draft + " "
+        draft = ""
+        Task { await runRecording() }
+    }
+
+    private func runRecording() async {
+        let availability = await environment.voice.requestAuthorization()
+        switch availability {
+        case .available:
+            break
+        case .denied, .restricted:
+            voicePermissionDenied = true
+            return
+        case .permissionNotDetermined:
+            return
+        case .unsupported:
+            errorMessage = String(localized: "On-device dictation isn't available on this device or language.")
+            return
+        }
+
+        isRecording = true
+        liveTranscript = dictationBase
+        do {
+            let stream = try await environment.voice.startTranscribing()
+            for try await transcript in stream {
+                switch transcript {
+                case .partial(let text), .final(let text):
+                    liveTranscript = dictationBase + text
+                    armSilenceTimer()
+                }
+            }
+        } catch {
+            errorMessage = String(localized: "Dictation failed. Try again.")
+        }
+        silenceTask?.cancel()
+        isRecording = false
+        finalizeRecording()
+    }
+
+    /// Restarts the "no speech" countdown; fires once speech pauses (FR-33).
+    private func armSilenceTimer() {
+        silenceTask?.cancel()
+        let timeout = silenceTimeout
+        silenceTask = Task {
+            try? await Task.sleep(for: timeout)
+            guard !Task.isCancelled else { return }
+            self.finishVoiceRecording()
         }
     }
 
-    private func startRecording() {
-        guard !isRecording, phase == .idle else { return }
-        voicePermissionDenied = false
-        Task {
-            let availability = await environment.voice.requestAuthorization()
-            switch availability {
-            case .available:
-                break
-            case .denied, .restricted:
-                voicePermissionDenied = true
-                return
-            case .permissionNotDetermined:
-                return
-            case .unsupported:
-                errorMessage = String(localized: "On-device dictation isn't available on this device or language.")
-                return
-            }
+    /// Ends capture and keeps the transcript for review (silence auto-stop, or
+    /// the user tapping done).
+    func finishVoiceRecording() {
+        guard isRecording else { return }
+        silenceTask?.cancel()
+        let voice = environment.voice
+        Task { await voice.stopTranscribing() }
+    }
 
-            // Dictation appends to whatever was already typed (FR-34).
-            dictationBase = draft.isEmpty ? "" : draft + " "
-            isRecording = true
-            do {
-                let stream = try await environment.voice.startTranscribing()
-                for try await transcript in stream {
-                    switch transcript {
-                    case .partial(let text), .final(let text):
-                        draft = dictationBase + text
-                    }
-                }
-            } catch {
-                errorMessage = String(localized: "Dictation failed. Try again.")
-            }
-            isRecording = false
+    /// Discards an in-progress recording without keeping the transcript.
+    func cancelVoiceRecording() {
+        guard isRecording else { return }
+        recordingCancelled = true
+        silenceTask?.cancel()
+        let voice = environment.voice
+        Task { await voice.stopTranscribing() }
+    }
+
+    private func finalizeRecording() {
+        let text = liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        liveTranscript = ""
+        guard !recordingCancelled, !text.isEmpty else {
+            // Cancelled or silent: restore whatever had been typed before.
+            recordingCancelled = false
+            draft = dictationBase.trimmingCharacters(in: .whitespacesAndNewlines)
+            return
         }
+        pendingVoiceTranscript = text
+    }
+
+    /// Commits the reviewed transcript and sends it (FR-34).
+    func sendVoiceTranscript() {
+        guard let text = pendingVoiceTranscript else { return }
+        pendingVoiceTranscript = nil
+        draft = text
+        send()
+    }
+
+    /// Moves the transcript into the editable field instead of sending it.
+    func editVoiceTranscript() {
+        guard let text = pendingVoiceTranscript else { return }
+        pendingVoiceTranscript = nil
+        draft = text
+    }
+
+    /// Throws away the reviewed transcript without sending.
+    func discardVoiceTranscript() {
+        pendingVoiceTranscript = nil
+        draft = ""
     }
 
     func dismissVoicePermissionHelp() {

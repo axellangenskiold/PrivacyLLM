@@ -438,53 +438,47 @@ struct ChatView: View {
     private var inputBar: some View {
         @Bindable var viewModel = viewModel
         return HStack(alignment: .bottom, spacing: 6) {
-            PVIconButton("paperclip", size: 18) {
-                showAttachImporter = true
-            }
-            .accessibilityLabel("Attach a PDF to this chat")
-            searchToggleButton
-            TextField("Message", text: $viewModel.draft, axis: .vertical)
-                .lineLimit(1...5)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(Color.pvSurface, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 21, style: .continuous)
-                        .strokeBorder(Color.pvHairline, lineWidth: 1)
-                )
-                .focused($inputFocused)
-                .accessibilityLabel("Message input")
-            if viewModel.isBusy {
-                PVIconButton("stop.fill", style: .alert, size: 16) {
-                    viewModel.stop()
-                }
-                .accessibilityLabel("Stop generating")
-            } else if viewModel.isRecording {
-                Button {
-                    viewModel.toggleRecording()
-                } label: {
-                    Image(systemName: "mic.badge.xmark")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.pvDanger)
-                        .symbolEffect(.pulse, options: .repeating)
-                        .frame(width: 34, height: 34)
-                        .background(Color.pvDanger.opacity(0.15), in: Circle())
-                }
-                .accessibilityLabel("Stop dictation")
-            } else if viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                PVIconButton("mic.fill", style: .surface, size: 16) {
-                    viewModel.toggleRecording()
-                }
-                .accessibilityLabel("Dictate message")
+            if viewModel.isRecording {
+                recordingBar
+            } else if viewModel.pendingVoiceTranscript != nil {
+                recordedBar
             } else {
-                PVIconButton("arrow.up", style: .filled, size: 16) {
-                    // Sending is an explicit "follow the reply" intent.
-                    isPinnedToBottom = true
-                    scrollToBottomTrigger &+= 1
-                    viewModel.send()
+                PVIconButton("paperclip", size: 18) {
+                    showAttachImporter = true
                 }
-                .disabled(!viewModel.canSend)
-                .accessibilityLabel("Send message")
+                .accessibilityLabel("Attach a PDF to this chat")
+                searchToggleButton
+                TextField("Message", text: $viewModel.draft, axis: .vertical)
+                    .lineLimit(1...5)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(Color.pvSurface, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 21, style: .continuous)
+                            .strokeBorder(Color.pvHairline, lineWidth: 1)
+                    )
+                    .focused($inputFocused)
+                    .accessibilityLabel("Message input")
+                if viewModel.isBusy {
+                    PVIconButton("stop.fill", style: .alert, size: 16) {
+                        viewModel.stop()
+                    }
+                    .accessibilityLabel("Stop generating")
+                } else if viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    PVIconButton("mic.fill", style: .surface, size: 16) {
+                        viewModel.startVoiceRecording()
+                    }
+                    .accessibilityLabel("Dictate message")
+                } else {
+                    PVIconButton("arrow.up", style: .filled, size: 16) {
+                        // Sending is an explicit "follow the reply" intent.
+                        isPinnedToBottom = true
+                        scrollToBottomTrigger &+= 1
+                        viewModel.send()
+                    }
+                    .disabled(!viewModel.canSend)
+                    .accessibilityLabel("Send message")
+                }
             }
         }
         .padding(.horizontal, 10)
@@ -496,6 +490,85 @@ struct ChatView: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
         )
+    }
+
+    /// Live dictation: transcript grows in place of the field; tapping done (or
+    /// a pause in speech) stops and hands the transcript to `recordedBar`.
+    private var recordingBar: some View {
+        HStack(spacing: 8) {
+            Button {
+                viewModel.cancelVoiceRecording()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.pvTextSecondary)
+                    .frame(width: 34, height: 34)
+            }
+            .accessibilityLabel("Cancel dictation")
+            HStack(spacing: 8) {
+                Image(systemName: "mic.fill")
+                    .foregroundStyle(Color.pvDanger)
+                    .symbolEffect(.pulse, options: .repeating)
+                Text(viewModel.liveTranscript.isEmpty ? "Listening…" : viewModel.liveTranscript)
+                    .font(PVFont.body)
+                    .foregroundStyle(viewModel.liveTranscript.isEmpty ? Color.pvTextSecondary : Color.pvTextPrimary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Color.pvSurface, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 21, style: .continuous)
+                    .strokeBorder(Color.pvDanger.opacity(0.5), lineWidth: 1)
+            )
+            PVIconButton("checkmark", style: .filled, size: 16) {
+                viewModel.finishVoiceRecording()
+            }
+            .accessibilityLabel("Finish dictation")
+        }
+    }
+
+    /// Reviewable recording: the transcript replaces the field with a send
+    /// button; tap the transcript to edit it, trash to discard (FR-34).
+    private var recordedBar: some View {
+        HStack(spacing: 8) {
+            Button {
+                viewModel.discardVoiceTranscript()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.pvTextSecondary)
+                    .frame(width: 34, height: 34)
+            }
+            .accessibilityLabel("Discard recording")
+            Button {
+                viewModel.editVoiceTranscript()
+                inputFocused = true
+            } label: {
+                Text(viewModel.pendingVoiceTranscript ?? "")
+                    .font(PVFont.body)
+                    .foregroundStyle(Color.pvTextPrimary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(Color.pvSurface, in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 21, style: .continuous)
+                            .strokeBorder(Color.pvAccent.opacity(0.4), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Recorded message, tap to edit")
+            .accessibilityValue(viewModel.pendingVoiceTranscript ?? "")
+            PVIconButton("arrow.up", style: .filled, size: 16) {
+                isPinnedToBottom = true
+                scrollToBottomTrigger &+= 1
+                viewModel.sendVoiceTranscript()
+            }
+            .accessibilityLabel("Send recorded message")
+        }
     }
 
     /// The globe keeps its tap-to-toggle behavior; the corner badge makes the
