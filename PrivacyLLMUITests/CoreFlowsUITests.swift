@@ -147,7 +147,7 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
-    func testDictationFillsInputWithoutSending() throws {
+    func testDictationOffersTranscriptForReviewWithoutSending() throws {
         let app = launchApp()
         app.buttons["New Chat"].firstMatch.tap()
 
@@ -155,17 +155,15 @@ final class CoreFlowsUITests: XCTestCase {
         XCTAssertTrue(mic.waitForExistence(timeout: 5))
         mic.tap()
 
-        // Mock voice streams partials; stop and check the draft (FR-33/34).
-        let stopDictation = app.buttons["Stop dictation"]
-        XCTAssertTrue(stopDictation.waitForExistence(timeout: 5))
-        let input = app.textFields["Message input"]
-        let populated = NSPredicate(format: "value CONTAINS %@", "Hello")
-        expectation(for: populated, evaluatedWith: input)
-        waitForExpectations(timeout: 8)
-        stopDictation.tap()
+        // Recording UI replaces the input field; end it (a pause in speech would
+        // auto-stop too). Mock voice yields a final transcript on stop.
+        let finish = app.buttons["Finish dictation"]
+        XCTAssertTrue(finish.waitForExistence(timeout: 5))
+        finish.tap()
 
-        XCTAssertTrue(app.buttons["Send message"].waitForExistence(timeout: 5))
-        // Nothing was auto-sent: no assistant bubble exists.
+        // FR-34: the transcript is offered for review with a Send button, not
+        // auto-sent — no assistant reply exists yet.
+        XCTAssertTrue(app.buttons["Send recorded message"].waitForExistence(timeout: 8))
         XCTAssertFalse(app.staticTexts["What works here"].exists)
     }
 
