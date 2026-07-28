@@ -83,8 +83,12 @@ final class CoreFlowsUITests: XCTestCase {
         // PVSegmentedPill is an accessibility container, not a native segmented control.
         let mode = app.otherElements["Model mode"]
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
-        mode.buttons["Thinking"].tap()
-        XCTAssertTrue(mode.buttons["Thinking"].isSelected)
+        let thinking = mode.buttons["Thinking"]
+        thinking.tap()
+        // The thumb slides before the trait lands; wait for it instead of
+        // sampling the snapshot the instant the tap returns.
+        expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: thinking)
+        waitForExpectations(timeout: 5)
     }
 
     @MainActor
