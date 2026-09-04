@@ -129,8 +129,6 @@ public struct PVBanner: View {
     private let style: Style
     private let icon: String
     private let text: String
-    @State private var pulsing = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(_ style: Style, icon: String, text: String) {
         self.style = style
@@ -144,14 +142,13 @@ public struct PVBanner: View {
 
     public var body: some View {
         HStack(spacing: 8) {
+            // Static, not pulsing. A repeatForever animation runs a transaction
+            // flush every frame for as long as the banner is on screen — and the
+            // warning banner's whole job is to appear when the phone is already
+            // too hot. See PVActivityDots.
             Circle()
                 .fill(tint)
                 .frame(width: 7, height: 7)
-                .opacity(pulsing && !reduceMotion ? 0.25 : 1)
-                .animation(
-                    reduceMotion ? nil : .easeInOut(duration: 0.65).repeatForever(autoreverses: true),
-                    value: pulsing
-                )
             Image(systemName: icon)
                 .font(.footnote.weight(.semibold))
             Text(text)
@@ -165,7 +162,6 @@ public struct PVBanner: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(tint.opacity(0.5)).frame(height: 1)
         }
-        .onAppear { pulsing = true }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
     }

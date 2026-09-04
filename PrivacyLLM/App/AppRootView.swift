@@ -6,7 +6,7 @@ import SwiftUI
 struct AppRootView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.scenePhase) private var scenePhase
-    @State private var systemEvents: SystemEventCoordinator?
+    @State private var startedSystemEvents = false
     @State private var needsOnboarding: Bool?
 
     var body: some View {
@@ -39,15 +39,14 @@ struct AppRootView: View {
                     default: AppearanceSetting.system
                 )) ?? .system
             }
-            if systemEvents == nil {
-                let coordinator = SystemEventCoordinator(inference: environment.inference)
-                coordinator.start()
-                systemEvents = coordinator
+            if !startedSystemEvents {
+                startedSystemEvents = true
+                environment.systemEvents.start()
                 MetricsCollector.shared.start()
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            systemEvents?.scenePhaseChanged(toBackground: phase == .background)
+            environment.systemEvents.scenePhaseChanged(toBackground: phase == .background)
         }
     }
 

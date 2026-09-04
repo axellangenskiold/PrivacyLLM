@@ -128,6 +128,8 @@ struct ChatView: View {
             )
         }
         .task { await viewModel.loadMessages() }
+        .onAppear { environment.systemEvents.chatOpened() }
+        .onDisappear { environment.systemEvents.chatClosed() }
         .onReceive(
             NotificationCenter.default
                 .publisher(for: ProcessInfo.thermalStateDidChangeNotification)

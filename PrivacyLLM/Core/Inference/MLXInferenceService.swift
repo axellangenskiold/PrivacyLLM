@@ -116,6 +116,15 @@ actor MLXInferenceService: InferenceServicing {
                                 firstTokenSeconds = Self.seconds(since: start)
                             }
                             continuation.yield(.token(text))
+                            // Sustained GPU decode is what cooks the phone. Once
+                            // iOS says the device is hot, idle a few ms per token
+                            // so generation keeps going at a lower duty cycle
+                            // instead of the OS throttling everything harder.
+                            // ponytail: fixed pause, not a control loop — make it
+                            // adaptive only if fixed pacing proves too blunt.
+                            if let pause = Self.thermalPause() {
+                                try? await Task.sleep(for: pause)
+                            }
                         case .toolCall(let call):
                             continuation.yield(.toolCall(Self.domainToolCall(from: call)))
                         case .info(let completionInfo):
@@ -195,6 +204,15 @@ actor MLXInferenceService: InferenceServicing {
             argumentsJSON = "{}"
         }
         return PrivacyLLM.ToolCall(name: call.function.name, argumentsJSON: argumentsJSON)
+    }
+
+    /// Extra delay per token for the current thermal state, or nil when cool.
+    static func thermalPause(for state: ProcessInfo.ThermalState = ProcessInfo.processInfo.thermalState) -> Duration? {
+        switch state {
+        case .serious: .milliseconds(10)
+        case .critical: .milliseconds(25)
+        default: nil
+        }
     }
 
     private static func seconds(since start: ContinuousClock.Instant) -> Double {

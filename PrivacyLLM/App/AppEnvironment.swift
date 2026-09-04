@@ -16,6 +16,9 @@ final class AppEnvironment {
     let tts: any TTSServicing
     let voiceMemoDirectory: URL
     let egressMonitor: EgressMonitor
+    /// Owns the loaded model's lifecycle (memory pressure, backgrounding, idle
+    /// unload). Lives here so any screen can tell it the chat opened or closed.
+    let systemEvents: SystemEventCoordinator
     /// Mirrors the persisted appearance setting so theme changes apply live (FR-39).
     var appearance = AppearanceSetting.system
 
@@ -32,6 +35,7 @@ final class AppEnvironment {
         self.database = database
         self.inference = inference
         self.modelManager = modelManager
+        systemEvents = SystemEventCoordinator(inference: inference)
         let monitor = EgressMonitor(store: EgressEventStore(database: database))
         egressMonitor = monitor
         self.search = search ?? ConfiguredSearchService(
@@ -67,6 +71,8 @@ final class AppEnvironment {
     }
 
     var userMemory: UserMemory { UserMemory(settingsStore: settingsStore) }
+
+
 
     var conversationStore: ConversationStore { ConversationStore(database: database) }
     var messageStore: MessageStore { MessageStore(database: database) }

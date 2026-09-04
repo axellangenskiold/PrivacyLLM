@@ -57,8 +57,11 @@ nonisolated struct UserMemory: Sendable {
         return "What you already know about this user:\n" + stored.map { "- \($0)" }.joined(separator: "\n")
     }
 
-    // ponytail: word-overlap match, not embeddings. Catches "likes espresso" vs
-    // "the user likes espresso"; swap in NLContextualEmbedding if it misses too much.
+    // ponytail: Jaccard over words, not embeddings. Catches "likes espresso" vs
+    // "the user likes espresso" while leaving facts that differ by one detail
+    // ("meeting at 9" vs "meeting at 3") as two separate facts — measuring
+    // against the smaller set instead of the union collapsed exactly those.
+    // Swap in NLContextualEmbedding if it still misses too much.
     private static func isNearDuplicate(_ lhs: String, _ rhs: String) -> Bool {
         let words: (String) -> Set<String> = { text in
             Set(text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
@@ -66,8 +69,7 @@ nonisolated struct UserMemory: Sendable {
         }
         let left = words(lhs), right = words(rhs)
         guard !left.isEmpty, !right.isEmpty else { return false }
-        let shared = Double(left.intersection(right).count)
-        return shared / Double(min(left.count, right.count)) >= 0.7
+        return Double(left.intersection(right).count) / Double(left.union(right).count) >= 0.8
     }
 }
 
