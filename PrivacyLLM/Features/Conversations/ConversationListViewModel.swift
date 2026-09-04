@@ -39,4 +39,11 @@ final class ConversationListViewModel {
         try? await store.delete(conversation.id)
         await refresh()
     }
+
+    func delete(ids: Set<UUID>) async {
+        for id in ids {
+            try? await store.delete(id)
+        }
+        await refresh()
+    }
 }

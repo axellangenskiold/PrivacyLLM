@@ -16,6 +16,8 @@ struct ConversationListView: View {
     @State private var path: [AppRoute] = []
     @State private var renameTarget: Conversation?
     @State private var renameText = ""
+    @State private var editMode: EditMode = .inactive
+    @State private var selection = Set<UUID>()
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -70,6 +72,26 @@ struct ConversationListView: View {
                             Label("New Chat", systemImage: "square.and.pencil")
                         }
                     }
+                    if !viewModel.conversations.isEmpty {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(isSelecting ? "Done" : "Select") { toggleSelecting() }
+                        }
+                    }
+                    if isSelecting {
+                        ToolbarItem(placement: .bottomBar) {
+                            Button(role: .destructive) {
+                                deleteSelected()
+                            } label: {
+                                Label(
+                                    selection.isEmpty ? "Delete" : "Delete (\(selection.count))",
+                                    systemImage: "trash"
+                                )
+                            }
+                            .tint(.red)
+                            .disabled(selection.isEmpty)
+                            .accessibilityIdentifier("delete-selected-chats")
+                        }
+                    }
                 }
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
@@ -118,7 +140,7 @@ struct ConversationListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvScreen()
         } else {
-            List {
+            List(selection: $selection) {
                 ForEach(viewModel.conversations) { conversation in
                     NavigationLink(value: AppRoute.chat(conversation)) {
                         row(for: conversation)
@@ -130,6 +152,9 @@ struct ConversationListView: View {
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                        // The app tint is emerald; destructive swipe actions
+                        // inherit it, so say red explicitly.
+                        .tint(.red)
                     }
                     .contextMenu {
                         Button {
@@ -147,6 +172,7 @@ struct ConversationListView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .environment(\.editMode, $editMode)
             .pvScreen()
         }
     }
@@ -175,6 +201,21 @@ struct ConversationListView: View {
         guard let target = renameTarget else { return }
         renameTarget = nil
         Task { await viewModel.rename(target, to: renameText) }
+    }
+
+    private var isSelecting: Bool { editMode == .active }
+
+    private func toggleSelecting() {
+        editMode = isSelecting ? .inactive : .active
+        selection.removeAll()
+    }
+
+    private func deleteSelected() {
+        let ids = selection
+        guard !ids.isEmpty else { return }
+        editMode = .inactive
+        selection.removeAll()
+        Task { await viewModel.delete(ids: ids) }
     }
 
     private func createAndOpen() {
