@@ -32,6 +32,10 @@ actor ChatOrchestrator {
     private let memory: UserMemory
     private let promptBuilder = PromptBuilder()
     private var turnTask: Task<Void, Never>?
+    /// Set by `cancel()`. The engine stops streaming on its own, but the agent
+    /// loop would otherwise carry on and run the tools the model already asked
+    /// for — so Stop has to be visible between rounds too.
+    private var isCancelled = false
 
     init(
         inference: any InferenceServicing,
@@ -74,6 +78,7 @@ actor ChatOrchestrator {
 
     /// Stops generation immediately; the in-flight turn persists what streamed so far.
     func cancel() async {
+        isCancelled = true
         await inference.cancelGeneration()
     }
 
@@ -83,6 +88,7 @@ actor ChatOrchestrator {
         history: [Message],
         continuation: AsyncStream<ChatTurnEvent>.Continuation
     ) async {
+        isCancelled = false
         var fullHistory = history
         if let newUserText {
             let trimmed = newUserText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -228,7 +234,7 @@ actor ChatOrchestrator {
             emitVisible(toolTail.visible)
             roundCalls += toolTail.calls
 
-            guard !roundCalls.isEmpty, round < Self.maxToolRounds else { break }
+            guard !roundCalls.isEmpty, round < Self.maxToolRounds, !isCancelled else { break }
 
             // Tool exchange lives only in the working transcript, not the database.
             workingHistory.append(Message(

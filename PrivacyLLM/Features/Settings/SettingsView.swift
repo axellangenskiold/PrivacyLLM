@@ -42,10 +42,14 @@ struct SettingsView: View {
 
             Section {
                 Toggle("Device Actions", isOn: $viewModel.deviceActionsEnabled)
+                if viewModel.appLockAvailable {
+                    Toggle("Require Face ID", isOn: $viewModel.appLockEnabled)
+                }
+                Button("Unload Model") { viewModel.unloadModel() }
             } header: {
                 Text("Device")
             } footer: {
-                Text("Lets the assistant add calendar events and reminders, and start calls or texts you confirm. Off by default; iOS still asks for permission the first time.")
+                Text("Device Actions lets the assistant add calendar events and reminders, and start calls or texts you confirm. Off by default; iOS still asks for permission the first time. Unloading frees the model's memory now — it reloads on your next message.")
             }
             .pvListRow()
 

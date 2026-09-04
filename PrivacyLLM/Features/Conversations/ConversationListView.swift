@@ -25,7 +25,8 @@ struct ConversationListView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var viewModel = viewModel
+        return NavigationStack(path: $path) {
             content
                 .navigationTitle("PrivacyLLM")
                 .toolbar {
@@ -109,7 +110,8 @@ struct ConversationListView: View {
                         DonateView()
                     }
                 }
-                .task { await viewModel.refresh() }
+                .searchable(text: $viewModel.query, prompt: "Search chats")
+                .task(id: viewModel.query) { await viewModel.refresh() }
                 .onChange(of: path) { _, newPath in
                     // Titles change after the first message; refresh when returning.
                     if newPath.isEmpty {
@@ -126,7 +128,15 @@ struct ConversationListView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.conversations.isEmpty {
+        if viewModel.conversations.isEmpty, !viewModel.query.isEmpty {
+            PVEmptyState(
+                icon: "magnifyingglass",
+                title: "No matches",
+                message: "Nothing in your chats mentions that."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .pvScreen()
+        } else if viewModel.conversations.isEmpty {
             VStack(spacing: 0) {
                 PVEmptyState(
                     icon: "bubble.left.and.bubble.right",

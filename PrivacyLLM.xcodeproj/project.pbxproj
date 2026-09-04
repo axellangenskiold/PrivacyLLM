@@ -449,6 +449,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "The assistant adds events you ask for to your calendar. It can only add — it never reads what is already there, and nothing leaves your iPhone.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID unlocks your chats on this device. Nothing about your face is stored by the app or sent anywhere.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "The assistant adds reminders you ask for. Your reminders stay on your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";
@@ -488,6 +489,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "The assistant adds events you ask for to your calendar. It can only add — it never reads what is already there, and nothing leaves your iPhone.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID unlocks your chats on this device. Nothing about your face is stored by the app or sent anywhere.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "The microphone captures your voice so it can be transcribed to text entirely on this device. Audio never leaves your iPhone.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "The assistant adds reminders you ask for. Your reminders stay on your iPhone.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech is transcribed on-device to turn your voice into message text. Your voice is never sent to any server.";

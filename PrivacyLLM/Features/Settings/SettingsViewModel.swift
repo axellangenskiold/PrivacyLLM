@@ -37,6 +37,25 @@ final class SettingsViewModel {
         didSet { persist(deviceActionsEnabled, for: .deviceActionsEnabled, ifChanged: oldValue != deviceActionsEnabled) }
     }
 
+    /// Face ID / passcode gate (OD-8). Only ever turned on after a successful
+    /// check, so nobody can lock themselves out by tapping a switch.
+    var appLockEnabled = false {
+        didSet {
+            guard loaded, oldValue != appLockEnabled else { return }
+            guard appLockEnabled else {
+                persist(false, for: .appLockEnabled, ifChanged: true)
+                return
+            }
+            Task { @MainActor in
+                if await AppLock.authenticate(reason: String(localized: "Turn on the app lock")) {
+                    persist(true, for: .appLockEnabled, ifChanged: true)
+                } else {
+                    appLockEnabled = false
+                }
+            }
+        }
+    }
+
     var memoryEnabled = true {
         didSet { persist(memoryEnabled, for: .memoryEnabled, ifChanged: oldValue != memoryEnabled) }
     }
@@ -87,6 +106,7 @@ final class SettingsViewModel {
         contextLength = (try? await settings.contextLength()) ?? 0
         appearance = (try? await settings.value(for: .appearance, default: AppearanceSetting.system)) ?? .system
         deviceActionsEnabled = (try? await settings.deviceActionsEnabled()) ?? false
+        appLockEnabled = (try? await settings.appLockEnabled()) ?? false
         memoryEnabled = await environment.userMemory.isEnabled()
         await refreshMemory()
         await refreshModels()
@@ -119,6 +139,14 @@ final class SettingsViewModel {
             try? await environment.egressEventStore.deleteAll()
             await refreshEgressEvents()
         }
+    }
+
+    var appLockAvailable: Bool { AppLock.isAvailable }
+
+    /// Frees the model's memory now instead of waiting for the idle timer.
+    func unloadModel() {
+        let inference = environment.inference
+        Task { await inference.unloadModel() }
     }
 
     // MARK: Memory (FR-43)

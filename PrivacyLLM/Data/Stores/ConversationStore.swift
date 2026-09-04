@@ -43,6 +43,34 @@ nonisolated struct ConversationStore: Sendable {
         return try records.map { try $0.domainValue(encryption: encryption) }
     }
 
+    /// Conversations whose title or any message matches `query`.
+    ///
+    /// Titles and message bodies are encrypted at rest, so there is no SQL to
+    /// push this into — everything has to be decrypted to be compared.
+    /// ponytail: O(all messages) per search, which is nothing at personal-chat
+    /// scale. If it ever drags, the fix is a blind index (store a keyed hash of
+    /// each token alongside the ciphertext), not plaintext in the database.
+    func search(_ query: String) async throws -> [Conversation] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return try await fetchAll() }
+        let all = try await fetchAll()
+        let titleMatches = all.filter { $0.title.localizedCaseInsensitiveContains(needle) }
+        let matchedIDs = Set(titleMatches.map(\.id))
+
+        let encryption = database.encryption
+        let bodyMatchIDs = try await database.writer.read { db in
+            try Row.fetchAll(db, sql: "SELECT conversationID, contentEnc FROM messages")
+                .compactMap { row -> String? in
+                    guard let content = try? encryption.decryptString(row["contentEnc"] as Data),
+                          content.localizedCaseInsensitiveContains(needle)
+                    else { return nil }
+                    return row["conversationID"] as String
+                }
+        }
+        let bodyMatches = Set(bodyMatchIDs.compactMap(UUID.init(uuidString:)))
+        return all.filter { matchedIDs.contains($0.id) || bodyMatches.contains($0.id) }
+    }
+
     func deleteAll() async throws {
         _ = try await database.writer.write { db in
             try ConversationRecord.deleteAll(db)

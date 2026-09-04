@@ -16,6 +16,9 @@ nonisolated enum SettingsKey: String, Sendable {
     case userMemory
     case memoryEnabled
     case deviceActionsEnabled
+    case appLockEnabled
+    case launchCount
+    case feedbackPromptCount
 }
 
 nonisolated struct SettingsStore: Sendable {
@@ -65,6 +68,10 @@ nonisolated struct SettingsStore: Sendable {
     /// Device actions (calendar, reminders, calls) are opt-in like search (FR-42).
     func deviceActionsEnabled() async throws -> Bool {
         try await value(for: .deviceActionsEnabled, default: false)
+    }
+
+    func appLockEnabled() async throws -> Bool {
+        try await value(for: .appLockEnabled, default: false)
     }
 
     func globalSystemPrompt() async throws -> String? {
