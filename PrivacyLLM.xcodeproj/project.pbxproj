@@ -17,9 +17,17 @@
 		1AB686000000000000000035 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000034 /* Highlightr */; };
 		1AB686000000000000000043 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000042 /* SwiftSoup */; };
 		1AB686000000000000000053 /* PrivacyUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AB686000000000000000052 /* PrivacyUI */; };
+		1AB68700000000000000010B /* PrivacyLLMWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1AB687000000000000000101 /* PrivacyLLMWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1AB68700000000000000010C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1AB685562FD9FB02000548D4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1AB687000000000000000106;
+			remoteInfo = PrivacyLLMWidgets;
+		};
 		1AB6856E2FD9FB05000548D4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1AB685562FD9FB02000548D4 /* Project object */;
@@ -36,10 +44,25 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		1AB68700000000000000010A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1AB68700000000000000010B /* PrivacyLLMWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivacyLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1AB6856D2FD9FB05000548D4 /* PrivacyLLMTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrivacyLLMTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1AB685772FD9FB05000548D4 /* PrivacyLLMUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrivacyLLMUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1AB687000000000000000101 /* PrivacyLLMWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PrivacyLLMWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -56,6 +79,11 @@
 		1AB6857A2FD9FB05000548D4 /* PrivacyLLMUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PrivacyLLMUITests;
+			sourceTree = "<group>";
+		};
+		1AB687000000000000000102 /* PrivacyLLMWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PrivacyLLMWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -92,6 +120,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1AB687000000000000000104 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -111,6 +146,7 @@
 				1AB6855E2FD9FB03000548D4 /* PrivacyLLM.app */,
 				1AB6856D2FD9FB05000548D4 /* PrivacyLLMTests.xctest */,
 				1AB685772FD9FB05000548D4 /* PrivacyLLMUITests.xctest */,
+				1AB687000000000000000101 /* PrivacyLLMWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -125,10 +161,12 @@
 				1AB6855A2FD9FB03000548D4 /* Sources */,
 				1AB6855B2FD9FB03000548D4 /* Frameworks */,
 				1AB6855C2FD9FB03000548D4 /* Resources */,
+				1AB68700000000000000010A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1AB68700000000000000010D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1AB685602FD9FB03000548D4 /* PrivacyLLM */,
@@ -196,6 +234,28 @@
 			productReference = 1AB685772FD9FB05000548D4 /* PrivacyLLMUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		1AB687000000000000000106 /* PrivacyLLMWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1AB687000000000000000107 /* Build configuration list for PBXNativeTarget "PrivacyLLMWidgets" */;
+			buildPhases = (
+				1AB687000000000000000103 /* Sources */,
+				1AB687000000000000000104 /* Frameworks */,
+				1AB687000000000000000105 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1AB687000000000000000102 /* PrivacyLLMWidgets */,
+			);
+			name = PrivacyLLMWidgets;
+			packageProductDependencies = (
+			);
+			productName = PrivacyLLMWidgets;
+			productReference = 1AB687000000000000000101 /* PrivacyLLMWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -244,6 +304,7 @@
 			projectRoot = "";
 			targets = (
 				1AB6855D2FD9FB03000548D4 /* PrivacyLLM */,
+				1AB687000000000000000106 /* PrivacyLLMWidgets */,
 				1AB6856C2FD9FB05000548D4 /* PrivacyLLMTests */,
 				1AB685762FD9FB05000548D4 /* PrivacyLLMUITests */,
 			);
@@ -266,6 +327,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1AB685752FD9FB05000548D4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1AB687000000000000000105 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -296,6 +364,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1AB687000000000000000103 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -308,6 +383,11 @@
 			isa = PBXTargetDependency;
 			target = 1AB6855D2FD9FB03000548D4 /* PrivacyLLM */;
 			targetProxy = 1AB685782FD9FB05000548D4 /* PBXContainerItemProxy */;
+		};
+		1AB68700000000000000010D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1AB687000000000000000106 /* PrivacyLLMWidgets */;
+			targetProxy = 1AB68700000000000000010C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -599,6 +679,60 @@
 			};
 			name = Release;
 		};
+		1AB687000000000000000108 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QWX246F7X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PrivacyLLMWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.axellangenskiold.PrivacyLLM.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		1AB687000000000000000109 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QWX246F7X;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PrivacyLLMWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = PrivacyLLM;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.axellangenskiold.PrivacyLLM.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -634,6 +768,15 @@
 			buildConfigurations = (
 				1AB685882FD9FB05000548D4 /* Debug */,
 				1AB685892FD9FB05000548D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1AB687000000000000000107 /* Build configuration list for PBXNativeTarget "PrivacyLLMWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB687000000000000000108 /* Debug */,
+				1AB687000000000000000109 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
