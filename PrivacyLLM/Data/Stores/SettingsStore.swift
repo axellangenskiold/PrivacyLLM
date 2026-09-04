@@ -13,6 +13,9 @@ nonisolated enum SettingsKey: String, Sendable {
     case activeRole
     case appearance
     case hasCompletedOnboarding
+    case userMemory
+    case memoryEnabled
+    case deviceActionsEnabled
 }
 
 nonisolated struct SettingsStore: Sendable {
@@ -57,6 +60,11 @@ nonisolated struct SettingsStore: Sendable {
     /// A positive value is a manual cap the user chose.
     func contextLength() async throws -> Int {
         try await value(for: .contextLength, default: 0)
+    }
+
+    /// Device actions (calendar, reminders, calls) are opt-in like search (FR-41).
+    func deviceActionsEnabled() async throws -> Bool {
+        try await value(for: .deviceActionsEnabled, default: false)
     }
 
     func globalSystemPrompt() async throws -> String? {

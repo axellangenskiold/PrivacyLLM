@@ -1,3 +1,4 @@
+import EventKit
 import Foundation
 import Observation
 
@@ -45,11 +46,27 @@ final class AppEnvironment {
 
     var voiceMemoStore: VoiceMemoStore { VoiceMemoStore(directory: voiceMemoDirectory) }
 
-    /// Tools available to the agent loop; the search tool reaches the network
-    /// only through the gated SearchServicing (TL-4).
+    /// One store for the whole app: EventKit caches its authorization state per
+    /// instance, so a fresh one per tool call would re-prompt.
+    private let eventStore = EKEventStore()
+
+    /// Tools available to the agent loop. The search tool reaches the network
+    /// only through the gated SearchServicing (TL-4); the device-action tools
+    /// are gated the same way by their own Settings switch (FR-41).
     var chatTools: [any LocalTool] {
-        [DateTimeTool(), CalculatorTool(), UnitConversionTool(), WebSearchTool(search: search)]
+        [
+            DateTimeTool(),
+            CalculatorTool(),
+            UnitConversionTool(),
+            WebSearchTool(search: search),
+            RememberTool(memory: UserMemory(settingsStore: settingsStore)),
+            CalendarEventTool(store: eventStore),
+            ReminderTool(store: eventStore),
+            PhoneTool(),
+        ]
     }
+
+    var userMemory: UserMemory { UserMemory(settingsStore: settingsStore) }
 
     var conversationStore: ConversationStore { ConversationStore(database: database) }
     var messageStore: MessageStore { MessageStore(database: database) }

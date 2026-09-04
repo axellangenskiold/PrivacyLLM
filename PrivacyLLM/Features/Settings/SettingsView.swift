@@ -40,6 +40,38 @@ struct SettingsView: View {
             }
             .pvListRow()
 
+            Section {
+                Toggle("Device Actions", isOn: $viewModel.deviceActionsEnabled)
+            } header: {
+                Text("Device")
+            } footer: {
+                Text("Lets the assistant add calendar events and reminders, and start calls or texts you confirm. Off by default; iOS still asks for permission the first time.")
+            }
+            .pvListRow()
+
+            Section {
+                Toggle("Remember me", isOn: $viewModel.memoryEnabled)
+                if viewModel.memoryEnabled {
+                    ForEach(Array(viewModel.memoryFacts.enumerated()), id: \.offset) { _, fact in
+                        Text(fact)
+                            .font(PVFont.footnote)
+                            .foregroundStyle(Color.pvTextSecondary)
+                    }
+                    .onDelete { viewModel.deleteMemory(atOffsets: $0) }
+                    if !viewModel.memoryFacts.isEmpty {
+                        Button("Forget everything", role: .destructive) { viewModel.clearMemory() }
+                            .tint(.red)
+                    }
+                }
+            } header: {
+                Text("Memory")
+            } footer: {
+                Text(viewModel.memoryFacts.isEmpty
+                    ? "The assistant can save a few short facts about you and use them in every chat. Nothing is saved yet. Stored on this device only."
+                    : "Used in every chat, stored on this device only. Swipe a line to delete it.")
+            }
+            .pvListRow()
+
             Section("Persona") {
                 TextField("Global system prompt", text: $viewModel.globalSystemPrompt, axis: .vertical)
                     .lineLimit(2...6)

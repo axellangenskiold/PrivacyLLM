@@ -7,6 +7,9 @@ nonisolated struct ToolSpec: Hashable, Codable, Sendable {
     var parametersJSONSchema: String
     /// Tools that send data off-device must re-check their gating toggle at call time (TL-4).
     var causesEgress: Bool
+    /// Tools that change something outside the app — calendar, reminders, the
+    /// dialler. Gated by its own opt-in switch, re-checked at call time (TL-4).
+    var causesDeviceAction = false
 }
 
 nonisolated struct ToolCall: Identifiable, Hashable, Codable, Sendable {

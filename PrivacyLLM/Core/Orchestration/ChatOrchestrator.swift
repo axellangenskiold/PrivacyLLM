@@ -29,6 +29,7 @@ actor ChatOrchestrator {
     private let settingsStore: SettingsStore
     private let documents: any DocumentServicing
     private let toolRouter: ToolRouter
+    private let memory: UserMemory
     private let promptBuilder = PromptBuilder()
     private var turnTask: Task<Void, Never>?
 
@@ -48,6 +49,7 @@ actor ChatOrchestrator {
         self.settingsStore = settingsStore
         self.documents = documents
         self.toolRouter = ToolRouter(tools: tools, settingsStore: settingsStore)
+        self.memory = UserMemory(settingsStore: settingsStore)
     }
 
     func send(text: String, conversation: Conversation, history: [Message]) -> AsyncStream<ChatTurnEvent> {
@@ -130,18 +132,26 @@ actor ChatOrchestrator {
         }
 
         let searchEnabled = (try? await settingsStore.searchEnabled()) ?? false
+        let deviceActionsEnabled = (try? await settingsStore.deviceActionsEnabled()) ?? false
         let toolSpecs = spec.capabilities.toolCalling
-            ? toolRouter.specs(includeEgressTools: searchEnabled)
+            ? toolRouter.specs(includeEgressTools: searchEnabled, includeDeviceActions: deviceActionsEnabled)
             : []
+        let memoryBlock = spec.capabilities.toolCalling ? await memory.promptBlock() : nil
 
         // Document Q&A (§3.4): retrieve before generating and ride the
         // excerpts in the system prompt; short single docs go in whole.
         let queryText = fullHistory.last(where: { $0.role == .user })?.content ?? ""
         let docContext = await documentContext(for: queryText, conversationID: conversation.id)
-        // Persona (custom/global) → behavior rules → document excerpts.
+        // Persona (custom/global) → behavior rules → what we know about the
+        // user → document excerpts.
         let systemPrompt = [
             basePrompt,
-            Self.coreGuidance(canSearch: toolSpecs.contains { $0.name == "web_search" }),
+            Self.coreGuidance(
+                canSearch: toolSpecs.contains { $0.name == "web_search" },
+                canRemember: toolSpecs.contains { $0.name == "remember" },
+                canActOnDevice: toolSpecs.contains(where: \.causesDeviceAction)
+            ),
+            memoryBlock,
             docContext.block,
         ]
         .compactMap(\.self)
@@ -282,24 +292,36 @@ actor ChatOrchestrator {
         "<tool_call>{\"name\": \"\(call.name)\", \"arguments\": \(call.argumentsJSON)}</tool_call>"
     }
 
+    /// Brevity rule. On-device models pad heavily by default, and every extra
+    /// token is battery, heat, and context the next turn can't use — so short
+    /// answers are a performance setting here, not just a style one.
+    private static let brevityRule = """
+    Be brief. Answer in as few words as the question allows — usually one to three sentences, and a single word or number when that is the whole answer. No preamble, no restating the question, no summary of what you just said, no offers of further help. Use a short list only when the answer is genuinely a list. Give full detail only when the user asks for it, or for code, which you write complete and correct.
+    """
+
     /// Always-on behavior rules appended to the system prompt. Small on-device
     /// models don't infer *when* to reach for a tool from the schema listing
     /// alone, so when web_search is available this spells out the trigger cases
     /// (time-sensitive facts, uncertainty); when it isn't, the model is told to
     /// admit staleness instead of guessing. The current date anchors "recent".
-    private static func coreGuidance(canSearch: Bool) -> String {
+    private static func coreGuidance(canSearch: Bool, canRemember: Bool = false, canActOnDevice: Bool = false) -> String {
         let today = Date.now.formatted(date: .abbreviated, time: .omitted)
+        var rules = [brevityRule, "Today is \(today)."]
         if canSearch {
-            return """
-            Today is \(today).
+            rules.append(#"""
             Use the web_search tool before answering when the question involves recent events or facts that change over time — news, sports results, scores, prices, weather, schedules, product releases, or anything "latest", "current", or after your training data — and whenever you are unsure of a fact. Search with 2-5 keywords (example: {"query": "brazil norway result"}), then answer using only the results and cite them. Never answer about current events from memory.
             Answer directly without searching for general knowledge, math, code, and questions about the user's attached documents.
-            """
+            """#)
+        } else {
+            rules.append("You cannot access the web. If an answer may have changed since your training data, or you are unsure of a fact, say so plainly instead of guessing.")
         }
-        return """
-        Today is \(today).
-        You cannot access the web. If an answer may have changed since your training data, or you are unsure of a fact, say so plainly instead of guessing.
-        """
+        if canRemember {
+            rules.append("When the user tells you something lasting about themselves — their name, where they live, what they work on, a standing preference — call the remember tool once with a short sentence, then carry on answering. Do not remember one-off questions, passwords, or anything they ask you to keep private, and do not mention the tool unless they ask.")
+        }
+        if canActOnDevice {
+            rules.append("You can add calendar events and reminders and start calls or texts. Only do it when the user actually asks. Resolve \"tomorrow\" or \"next Friday\" with current_datetime first, then act, then confirm in one short line.")
+        }
+        return rules.joined(separator: "\n")
     }
 
     /// Builds the document-context block for this turn (FR-27, §3.4).

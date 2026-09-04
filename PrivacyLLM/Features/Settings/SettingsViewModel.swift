@@ -32,6 +32,15 @@ final class SettingsViewModel {
         didSet { persist(contextLength, for: .contextLength, ifChanged: oldValue != contextLength) }
     }
 
+    /// Device actions (calendar, reminders, calls) are opt-in (FR-41).
+    var deviceActionsEnabled = false {
+        didSet { persist(deviceActionsEnabled, for: .deviceActionsEnabled, ifChanged: oldValue != deviceActionsEnabled) }
+    }
+
+    var memoryEnabled = true {
+        didSet { persist(memoryEnabled, for: .memoryEnabled, ifChanged: oldValue != memoryEnabled) }
+    }
+
     var appearance = AppearanceSetting.system {
         didSet {
             guard oldValue != appearance else { return }
@@ -45,6 +54,7 @@ final class SettingsViewModel {
     private(set) var activeFastID: String?
     private(set) var activeThinkingID: String?
     private(set) var recentEgressEvents: [EgressEvent] = []
+    private(set) var memoryFacts: [String] = []
     private(set) var loaded = false
 
     /// Llama 3.2 Community License (§1.b.i) requires a visible "Built with Llama"
@@ -76,6 +86,9 @@ final class SettingsViewModel {
         maxTokens = sampling.maxTokens
         contextLength = (try? await settings.contextLength()) ?? 0
         appearance = (try? await settings.value(for: .appearance, default: AppearanceSetting.system)) ?? .system
+        deviceActionsEnabled = (try? await settings.deviceActionsEnabled()) ?? false
+        memoryEnabled = await environment.userMemory.isEnabled()
+        await refreshMemory()
         await refreshModels()
         await refreshEgressEvents()
         loaded = true
@@ -105,6 +118,28 @@ final class SettingsViewModel {
         Task {
             try? await environment.egressEventStore.deleteAll()
             await refreshEgressEvents()
+        }
+    }
+
+    // MARK: Memory (FR-42)
+
+    func refreshMemory() async {
+        memoryFacts = await environment.userMemory.facts()
+    }
+
+    func deleteMemory(atOffsets offsets: IndexSet) {
+        let memory = environment.userMemory
+        Task {
+            await memory.remove(atOffsets: offsets)
+            await refreshMemory()
+        }
+    }
+
+    func clearMemory() {
+        let memory = environment.userMemory
+        Task {
+            await memory.clear()
+            await refreshMemory()
         }
     }
 
