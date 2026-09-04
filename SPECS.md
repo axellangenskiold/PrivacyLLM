@@ -219,7 +219,7 @@ Native Swift, SwiftUI, **MVVM** for the presentation layer, with a clean separat
 - **NFR-17 (SHOULD)** Respect Reduce Motion.
 
 ### 5.5 Battery
-- **NFR-18 (SHOULD)** Inference does not run in the background; generation pauses/cancels on backgrounding per iOS task rules.
+- **NFR-18 (SHOULD)** Inference does not run in the background beyond the window iOS grants: a turn already in flight may finish inside the background-task grace period (see FR-46), after which generation is cancelled and the model unloaded. Nothing is scheduled or resumed while backgrounded.
 - **NFR-19 (SHOULD)** Surface a subtle hint when heavy/long generations are likely to drain battery or heat the device.
 
 ### 5.6 Maintainability
