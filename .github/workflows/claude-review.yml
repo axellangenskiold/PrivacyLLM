@@ -1,0 +1,57 @@
+name: AI Review
+
+# Reviews pull requests, and answers when someone writes "@claude ..." in a PR
+# comment or review. Separate from ci.yml on purpose: this one needs a secret
+# and costs money per run, so a fork PR must not be able to trigger it.
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude
+    # Skip forks (no access to the secret) and only wake on a real mention.
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this pull request for a SwiftUI iOS app that runs an LLM
+            entirely on-device. Leave inline comments only where something is
+            actually wrong; say so plainly when it looks fine.
+
+            Weight the things that hurt this app specifically:
+            - Anything that sends data off the device, or widens what does.
+              Search and device actions are opt-in and must stay re-checked at
+              call time, not just at prompt-build time.
+            - Continuously-updating views inside the chat transcript's lazy
+              stack. They have twice caused an unrecoverable main-thread render
+              loop; see PVActivityDots for the rule.
+            - Model lifecycle: anything that keeps weights resident, blocks the
+              main thread, or raises sustained GPU load.
+            - Swift concurrency: actor isolation, Sendable, unstructured Tasks
+              that outlive their owner.
+            - Force unwraps and crash paths on malformed model output.
+
+            Skip formatting: SwiftLint and SwiftFormat already run in ci.yml.
