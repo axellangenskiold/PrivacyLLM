@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct ChatView: View {
     private let environment: AppEnvironment
     @State private var viewModel: ChatViewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var thermalState = ProcessInfo.processInfo.thermalState
     @State private var editTarget: Message?
     @State private var editText = ""
@@ -130,6 +131,9 @@ struct ChatView: View {
         .task { await viewModel.loadMessages() }
         .onAppear { environment.systemEvents.chatOpened() }
         .onDisappear { environment.systemEvents.chatClosed() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { viewModel.prepareForBackgroundIfGenerating() }
+        }
         .onReceive(
             NotificationCenter.default
                 .publisher(for: ProcessInfo.thermalStateDidChangeNotification)

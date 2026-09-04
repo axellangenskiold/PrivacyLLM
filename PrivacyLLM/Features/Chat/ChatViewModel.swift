@@ -437,13 +437,35 @@ final class ChatViewModel {
             phase = .idle
             Haptics.success()
             UIAccessibility.post(notification: .announcement, argument: String(localized: "Reply finished"))
+            notifyIfAway(
+                title: String(localized: "Reply ready"),
+                body: String(message.content.prefix(120))
+            )
         case .turnFailed(let reason, let partial):
             if let partial { messages.append(partial) }
             clearStreamingState()
             errorMessage = reason
             phase = .idle
             Haptics.error()
+            notifyIfAway(
+                title: String(localized: "Reply unfinished"),
+                body: String(localized: "Open PrivacyLLM to finish it.")
+            )
         }
+    }
+
+    /// Notifies only when the user has actually left — in the foreground the
+    /// reply is already on screen (FR-46).
+    private func notifyIfAway(title: String, body: String) {
+        guard !LocalNotifier.appIsForeground else { return }
+        Task { await LocalNotifier.notify(title: title, body: body) }
+    }
+
+    /// Primes notification permission the first time a reply is still running as
+    /// the user leaves — in context, not at launch.
+    func prepareForBackgroundIfGenerating() {
+        guard isBusy else { return }
+        Task { await LocalNotifier.requestAuthorization() }
     }
 
     // MARK: Streaming throttle

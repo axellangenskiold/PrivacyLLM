@@ -11,6 +11,11 @@ final class SystemEventCoordinator {
     /// Metal allocation.
     static let idleUnloadDelay = Duration.seconds(120)
 
+    /// How long a backgrounded turn is allowed to keep going before the model is
+    /// cancelled and unloaded. iOS grants roughly 30s; stopping short of that
+    /// leaves room to unload cleanly instead of being killed mid-flight.
+    static let backgroundGrace = Duration.seconds(20)
+
     private let inference: any InferenceServicing
     private var pressureSource: DispatchSourceMemoryPressure?
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
@@ -67,17 +72,20 @@ final class SystemEventCoordinator {
         }
     }
 
+    /// Leaving no longer kills an in-flight reply on the spot (was NFR-18): the
+    /// turn gets the OS grace window to finish, and ChatViewModel notifies when
+    /// it does. iOS blocks GPU work in a backgrounded app, so this only rescues
+    /// replies that were nearly done — when it isn't enough the partial text is
+    /// kept and the user finishes it on the next open.
     private func enteredBackground() {
-        let inference = inference
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
-        Task { await inference.cancelGeneration() }
         guard backgroundTaskID == .invalid else { return }
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "unload-model") { [weak self] in
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "finish-turn") { [weak self] in
             self?.finishBackgroundUnload()
         }
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(15))
+            try? await Task.sleep(for: Self.backgroundGrace)
             self?.finishBackgroundUnload()
         }
     }
@@ -91,6 +99,7 @@ final class SystemEventCoordinator {
         guard backgroundTaskID != .invalid else { return }
         let inference = inference
         Task {
+            await inference.cancelGeneration()
             await inference.unloadModel()
             self.endBackgroundTask()
         }

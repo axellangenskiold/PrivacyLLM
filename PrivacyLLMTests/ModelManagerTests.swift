@@ -76,7 +76,11 @@ struct ModelDownloaderTests {
         let session = HuggingFaceAPI.makeSession(protocolClasses: [HFMockURLProtocol.self])
         let base = FileManager.default.temporaryDirectory.appending(path: "model-tests-\(UUID().uuidString)")
         let store = ModelStore(baseDirectory: base)
-        let downloader = ModelDownloader(api: HuggingFaceAPI(session: session), store: store, chunkSize: 64 * 1024)
+        let downloader = ModelDownloader(
+            api: HuggingFaceAPI(session: session),
+            store: store,
+            transfers: SessionTransfers(session: session, chunkSize: 64 * 1024)
+        )
         return (downloader, store, spec)
     }
 
