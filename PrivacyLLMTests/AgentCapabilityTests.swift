@@ -104,3 +104,34 @@ struct DeviceActionTests {
         #expect(opened?.absoluteString.contains("body=") == true)
     }
 }
+
+struct FeedbackTests {
+    @Test func asksEveryFifthLaunchAndOnlyFourTimes() async throws {
+        let prompt = FeedbackPrompt(settingsStore: SettingsStore(database: try AppDatabase.inMemory()))
+        var asked: [Int] = []
+        for launch in 1...40 where await prompt.registerLaunchAndShouldAsk() {
+            asked.append(launch)
+        }
+        #expect(asked == [5, 10, 15, 20])
+    }
+
+    @Test func sendingFeedbackStopsTheAsking() async throws {
+        let prompt = FeedbackPrompt(settingsStore: SettingsStore(database: try AppDatabase.inMemory()))
+        for _ in 1...4 { _ = await prompt.registerLaunchAndShouldAsk() }
+        await prompt.silence()
+        var asked = false
+        for _ in 5...30 where await prompt.registerLaunchAndShouldAsk() { asked = true }
+        #expect(!asked)
+    }
+
+    @Test func buildsAPrefilledIssueURL() throws {
+        let url = try #require(FeedbackView.issueURL(body: "Please add an iPad layout & widgets"))
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        #expect(components.host == "github.com")
+        #expect(components.path.hasSuffix("/issues/new"))
+        let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        #expect(items["body"] == "Please add an iPad layout & widgets")
+        #expect(items["labels"] == "feedback")
+        #expect(FeedbackView.issueURL(body: "   ") == nil)
+    }
+}

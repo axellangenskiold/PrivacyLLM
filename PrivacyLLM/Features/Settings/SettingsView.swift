@@ -264,6 +264,14 @@ struct PrivacyExplainerView: View {
 
 /// PR-14: local-only log of every outbound event.
 struct PrivacyActivityView: View {
+    static func icon(for kind: EgressEvent.Kind) -> String {
+        switch kind {
+        case .webSearch: "magnifyingglass"
+        case .modelDownload: "square.and.arrow.down"
+        case .feedback: "bubble.left.and.exclamationmark.bubble.right"
+        }
+    }
+
     let viewModel: SettingsViewModel
 
     var body: some View {
@@ -279,8 +287,8 @@ struct PrivacyActivityView: View {
             } else {
                 ForEach(viewModel.recentEgressEvents) { event in
                     HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: event.kind == .webSearch ? "magnifyingglass" : "square.and.arrow.down")
-                            .foregroundStyle(event.kind == .webSearch ? Color.pvWarning : Color.pvAccent)
+                        Image(systemName: Self.icon(for: event.kind))
+                            .foregroundStyle(event.kind == .modelDownload ? Color.pvAccent : Color.pvWarning)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(event.detail)
                                 .font(.subheadline)

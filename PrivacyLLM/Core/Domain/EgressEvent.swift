@@ -6,6 +6,7 @@ nonisolated struct EgressEvent: Identifiable, Hashable, Codable, Sendable {
     enum Kind: String, Codable, Sendable {
         case webSearch
         case modelDownload
+        case feedback
     }
 
     var id: UUID

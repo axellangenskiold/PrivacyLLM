@@ -18,6 +18,8 @@ struct ConversationListView: View {
     @State private var renameText = ""
     @State private var editMode: EditMode = .inactive
     @State private var selection = Set<UUID>()
+    @State private var showFeedback = false
+    @State private var askForFeedback = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -46,6 +48,11 @@ struct ConversationListView: View {
                                 path.append(.settings)
                             } label: {
                                 Label("Settings", systemImage: "gearshape")
+                            }
+                            Button {
+                                showFeedback = true
+                            } label: {
+                                Label("Feedback", systemImage: "bubble.left.and.exclamationmark.bubble.right")
                             }
                             if FeatureFlags.current.isEnabled(.donations) {
                                 Button {
@@ -122,6 +129,20 @@ struct ConversationListView: View {
                     TextField("Name", text: $renameText)
                     Button("Save") { confirmRename() }
                     Button("Cancel", role: .cancel) {}
+                }
+                .alert("Anything you'd like in the app?", isPresented: $askForFeedback) {
+                    Button("Tell us") { showFeedback = true }
+                    Button("Not now", role: .cancel) {}
+                } message: {
+                    Text("It goes straight to the developer.")
+                }
+                .sheet(isPresented: $showFeedback) {
+                    FeedbackView(environment: environment)
+                }
+                .task {
+                    askForFeedback = await FeedbackPrompt(
+                        settingsStore: environment.settingsStore
+                    ).registerLaunchAndShouldAsk()
                 }
         }
     }
