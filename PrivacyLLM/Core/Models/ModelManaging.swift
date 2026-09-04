@@ -55,7 +55,7 @@ nonisolated protocol ModelManaging: Sendable {
     /// True when the device's physical RAM is below the model's requirement (FR-16).
     func exceedsDeviceRAM(_ spec: ModelSpec) -> Bool
 
-    /// Pulls the current model list from Hugging Face into the catalog (FR-43).
+    /// Pulls the current model list from Hugging Face into the catalog (FR-44).
     /// User-initiated only — nothing here runs on launch. Returns how many
     /// models the refresh ended up offering.
     @discardableResult

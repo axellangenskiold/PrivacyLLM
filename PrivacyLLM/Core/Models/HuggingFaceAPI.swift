@@ -50,7 +50,7 @@ nonisolated struct HuggingFaceAPI: Sendable {
         }
     }
 
-    /// Models from one Hub author under a given ranking (FR-43). Only metadata
+    /// Models from one Hub author under a given ranking (FR-44). Only metadata
     /// comes back — no user data goes out beyond the request itself.
     func listModels(
         author: String = "mlx-community",

@@ -32,7 +32,7 @@ final class SettingsViewModel {
         didSet { persist(contextLength, for: .contextLength, ifChanged: oldValue != contextLength) }
     }
 
-    /// Device actions (calendar, reminders, calls) are opt-in (FR-41).
+    /// Device actions (calendar, reminders, calls) are opt-in (FR-42).
     var deviceActionsEnabled = false {
         didSet { persist(deviceActionsEnabled, for: .deviceActionsEnabled, ifChanged: oldValue != deviceActionsEnabled) }
     }
@@ -121,7 +121,7 @@ final class SettingsViewModel {
         }
     }
 
-    // MARK: Memory (FR-42)
+    // MARK: Memory (FR-43)
 
     func refreshMemory() async {
         memoryFacts = await environment.userMemory.facts()

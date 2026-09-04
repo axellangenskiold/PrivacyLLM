@@ -14,6 +14,33 @@ final class CoreFlowsUITests: XCTestCase {
     }
 
     @MainActor
+    func testSelectingSeveralChatsDeletesThemTogether() throws {
+        let app = launchApp()
+
+        // Three chats, backing out of each so the list is what's on screen.
+        for _ in 0..<3 {
+            app.buttons["New Chat"].firstMatch.tap()
+            XCTAssertTrue(app.textFields["Message input"].waitForExistence(timeout: 5))
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+        }
+        let rows = app.collectionViews.cells
+        XCTAssertTrue(rows.element(boundBy: 2).waitForExistence(timeout: 5))
+        let before = rows.count
+
+        app.buttons["Select"].tap()
+        rows.element(boundBy: 0).tap()
+        rows.element(boundBy: 1).tap()
+
+        let delete = app.buttons["delete-selected-chats"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        delete.tap()
+
+        let expected = before - 2
+        expectation(for: NSPredicate(format: "count == %d", expected), evaluatedWith: rows)
+        waitForExpectations(timeout: 10)
+    }
+
+    @MainActor
     func testStopGenerationReturnsToIdle() throws {
         // Slow streaming keeps generation in flight long enough that the stop
         // affordance is reliably observable, even on a loaded machine.

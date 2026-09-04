@@ -62,7 +62,7 @@ nonisolated struct SettingsStore: Sendable {
         try await value(for: .contextLength, default: 0)
     }
 
-    /// Device actions (calendar, reminders, calls) are opt-in like search (FR-41).
+    /// Device actions (calendar, reminders, calls) are opt-in like search (FR-42).
     func deviceActionsEnabled() async throws -> Bool {
         try await value(for: .deviceActionsEnabled, default: false)
     }

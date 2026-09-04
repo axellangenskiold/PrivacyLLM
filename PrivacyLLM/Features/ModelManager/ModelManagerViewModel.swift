@@ -43,7 +43,7 @@ final class ModelManagerViewModel {
         importError = nil
     }
 
-    /// Pulls the current model list off the Hub (FR-43). Only ever from a tap:
+    /// Pulls the current model list off the Hub (FR-44). Only ever from a tap:
     /// the app makes no network request on its own.
     func refreshFromHub() async {
         guard !isRefreshing else { return }

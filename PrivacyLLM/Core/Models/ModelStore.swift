@@ -54,7 +54,7 @@ nonisolated struct ModelStore: Sendable {
 
     // MARK: Discovered models
 
-    /// Specs pulled from the Hugging Face listing (FR-43). Cached so the models
+    /// Specs pulled from the Hugging Face listing (FR-44). Cached so the models
     /// screen still shows them offline, and kept apart from `imported.json` so a
     /// refresh can replace the whole set without touching the user's imports.
     private var discoveredManifestURL: URL {

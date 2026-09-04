@@ -56,7 +56,7 @@ final class AppEnvironment {
 
     /// Tools available to the agent loop. The search tool reaches the network
     /// only through the gated SearchServicing (TL-4); the device-action tools
-    /// are gated the same way by their own Settings switch (FR-41).
+    /// are gated the same way by their own Settings switch (FR-42).
     var chatTools: [any LocalTool] {
         [
             DateTimeTool(),
@@ -71,8 +71,6 @@ final class AppEnvironment {
     }
 
     var userMemory: UserMemory { UserMemory(settingsStore: settingsStore) }
-
-
 
     var conversationStore: ConversationStore { ConversationStore(database: database) }
     var messageStore: MessageStore { MessageStore(database: database) }

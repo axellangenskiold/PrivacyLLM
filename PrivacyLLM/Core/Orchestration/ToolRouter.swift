@@ -13,7 +13,7 @@ nonisolated struct ToolRouter: Sendable {
     }
 
     /// Specs advertised to the model. Gated tools are omitted entirely while
-    /// their switch is off, so the model never tries to call them (FR-18/41).
+    /// their switch is off, so the model never tries to call them (FR-18/42).
     func specs(includeEgressTools: Bool, includeDeviceActions: Bool = false) -> [ToolSpec] {
         toolsByName.values
             .map(\.spec)

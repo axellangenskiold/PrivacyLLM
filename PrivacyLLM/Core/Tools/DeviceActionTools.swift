@@ -3,7 +3,7 @@ import Foundation
 import UIKit
 
 /// Tools that change something outside the app — a calendar entry, a reminder,
-/// a phone call (FR-41). They are opt-in (Settings → Device actions, off by
+/// a phone call (FR-42). They are opt-in (Settings → Device actions, off by
 /// default) and the router re-checks that switch at call time, exactly like the
 /// egress tools do. Calls and texts go through the system's own confirmation
 /// UI, so the model can only ever *offer* them.

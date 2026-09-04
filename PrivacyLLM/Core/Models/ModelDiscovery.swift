@@ -1,7 +1,7 @@
 import Foundation
 
 /// Turns Hugging Face's model listing into catalog entries so the app doesn't
-/// have to ship a new build to offer a new model (FR-43).
+/// have to ship a new build to offer a new model (FR-44).
 ///
 /// Two honest limits worth naming: the Hub has no notion of "best", so this
 /// ranks by downloads within `mlx-community` — popular, current, and known to

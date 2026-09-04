@@ -1,7 +1,7 @@
 import Foundation
 
 /// Long-term facts about the user, injected into every chat's system prompt
-/// (FR-42). The model writes them itself through `remember`; the user can see,
+/// (FR-43). The model writes them itself through `remember`; the user can see,
 /// delete, or switch the whole feature off in Settings.
 ///
 /// Hard-capped on purpose: memory rides in front of *every* turn, so it has to
@@ -73,7 +73,7 @@ nonisolated struct UserMemory: Sendable {
     }
 }
 
-/// Lets the model write to its own long-term memory (FR-42).
+/// Lets the model write to its own long-term memory (FR-43).
 nonisolated struct RememberTool: LocalTool {
     private struct Arguments: Decodable {
         var fact: String
