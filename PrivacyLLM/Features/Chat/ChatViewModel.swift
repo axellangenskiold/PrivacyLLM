@@ -62,6 +62,7 @@ final class ChatViewModel {
             messageStore: environment.messageStore,
             conversationStore: environment.conversationStore,
             settingsStore: environment.settingsStore,
+            documents: environment.documents,
             tools: environment.chatTools
         )
     }
