@@ -41,6 +41,17 @@ struct ModelManagerView: View {
         .scrollContentBackground(.hidden)
         .pvScreen()
         .navigationTitle("Models")
+        .alert(
+            "Model list",
+            isPresented: Binding(
+                get: { viewModel.refreshMessage != nil },
+                set: { if !$0 { viewModel.clearRefreshMessage() } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.refreshMessage ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -50,6 +61,12 @@ struct ModelManagerView: View {
                         }
                     }
                     Divider()
+                    Button {
+                        Task { await viewModel.refreshFromHub() }
+                    } label: {
+                        Label("Refresh from Hugging Face", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(viewModel.isRefreshing)
                     Button {
                         isImporting = true
                     } label: {

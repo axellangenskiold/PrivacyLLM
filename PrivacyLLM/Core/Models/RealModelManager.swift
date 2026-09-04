@@ -4,13 +4,18 @@ import Foundation
 /// via ModelDownloader, weights in ModelStore, active fast/thinking selections
 /// in SettingsStore, and a local egress-log entry per download (PR-14).
 actor RealModelManager: ModelManaging {
-    /// Bundled models plus any the user imported (read from disk so runtime
-    /// imports are visible everywhere `catalog` is consulted).
+    /// Bundled models, then anything pulled from the Hub, then the user's own
+    /// imports (all read from disk so runtime changes are visible everywhere
+    /// `catalog` is consulted). Bundled entries win on id: they carry
+    /// hand-checked sizes and licences.
     nonisolated var catalog: [ModelSpec] {
-        bundleCatalog + store.loadImportedSpecs()
+        let bundledIDs = Set(bundleCatalog.map(\.id))
+        let discovered = store.loadDiscoveredSpecs().filter { !bundledIDs.contains($0.id) }
+        return bundleCatalog + discovered + store.loadImportedSpecs()
     }
 
     private let bundleCatalog: [ModelSpec]
+    private let api: HuggingFaceAPI
     private let store: ModelStore
     private let downloader: ModelDownloader
     private let settings: SettingsStore
@@ -31,10 +36,11 @@ actor RealModelManager: ModelManaging {
         self.bundleCatalog = catalog
         self.store = store
         let api = HuggingFaceAPI(session: session)
+        self.api = api
         self.downloader = ModelDownloader(api: api, store: store)
         self.settings = settingsStore
         self.egressLog = egressEventStore
-        for spec in catalog {
+        for spec in bundleCatalog + store.loadDiscoveredSpecs() + store.loadImportedSpecs() {
             phases[spec.id] = if store.isDownloaded(spec.id) {
                 .downloaded
             } else if store.hasPartial(spec.id) {
@@ -271,6 +277,29 @@ actor RealModelManager: ModelManaging {
     func setActiveModel(_ modelID: String, for role: ModelRole) async {
         try? await settings.set(modelID, for: Self.settingsKey(for: role))
         notify()
+    }
+
+    @discardableResult
+    func refreshCatalogFromHub() async throws -> Int {
+        // Metadata only, but it is still a request to huggingface.co — log it
+        // like every other byte that leaves (PR-2/14).
+        try? await egressLog.append(EgressEvent(
+            kind: .modelDownload,
+            destinationHost: HuggingFaceAPI.host,
+            detail: String(localized: "Model list refresh")
+        ))
+        // Two rankings, merged in order: trending is the closest the Hub has to
+        // "good right now", downloads is the proven-and-boring backfill. Neither
+        // alone fills a phone-sized list — most of what trends is far too big.
+        let trending = try await api.listModels(sort: "trendingScore")
+        let popular = (try? await api.listModels(sort: "downloads")) ?? []
+        let specs = ModelDiscovery.specs(from: trending + popular)
+        store.saveDiscoveredSpecs(specs)
+        for spec in specs where phases[spec.id] == nil {
+            phases[spec.id] = store.isDownloaded(spec.id) ? .downloaded : .notDownloaded
+        }
+        notify()
+        return specs.count
     }
 
     nonisolated func exceedsDeviceRAM(_ spec: ModelSpec) -> Bool {

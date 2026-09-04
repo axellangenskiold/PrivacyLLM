@@ -50,6 +50,28 @@ nonisolated struct HuggingFaceAPI: Sendable {
         }
     }
 
+    /// Models from one Hub author under a given ranking (FR-43). Only metadata
+    /// comes back — no user data goes out beyond the request itself.
+    func listModels(
+        author: String = "mlx-community",
+        sort: String = "trendingScore",
+        limit: Int = 100
+    ) async throws -> [HFModelSummary] {
+        var components = URLComponents(string: "https://\(Self.host)/api/models")!
+        components.queryItems = [
+            URLQueryItem(name: "author", value: author),
+            URLQueryItem(name: "pipeline_tag", value: "text-generation"),
+            URLQueryItem(name: "sort", value: sort),
+            URLQueryItem(name: "direction", value: "-1"),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ]
+        let (data, response) = try await session.data(from: components.url!)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode([HFModelSummary].self, from: data)
+    }
+
     func downloadURL(repo: String, revision: String = "main", path: String) -> URL {
         URL(string: "https://\(Self.host)/\(repo)/resolve/\(revision)/\(path)")!
     }
