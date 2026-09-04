@@ -186,7 +186,7 @@ Native Swift, SwiftUI, **MVVM** for the presentation layer, with a clean separat
 - **FR-43 (SHOULD)** User memory: the model saves short, lasting facts about the user with a `remember` tool and they ride in every system prompt. Hard-capped so memory costs a sliver of the context window; the user can read, delete, or disable it in Settings.
 - **FR-46 (SHOULD)** Background replies: an in-flight turn survives the app going to the background for the OS grace window, and a local notification says when the reply is ready. iOS blocks GPU work in a backgrounded app, so this finishes nearly-done replies rather than running full turns.
 - **FR-47 (COULD)** Home-screen widget: a launcher only. Widgets render where anyone holding the phone can read them, so no chat content appears on one.
-- **FR-45 (SHOULD)** Feedback: the user can write a suggestion in the app and post it as a GitHub issue. The app opens a prefilled issue in the browser rather than posting it — no token ships in the binary. Prompted every fifth launch, at most four times ever.
+- **FR-45 (SHOULD)** Feedback: the user can write a suggestion in the app and send it as a GitHub issue (recommended) or as an email to the support address. Either way the app opens the destination prefilled rather than sending it itself — no token ships in the binary. Prompted every fifth launch, at most four times ever.
 - **FR-44 (SHOULD)** Catalog refresh: the model list can be pulled from the Hugging Face Hub on demand instead of only shipping in the bundle. User-initiated, logged as egress, and filtered to quantized text models that fit a phone.
 
 ---

@@ -124,14 +124,39 @@ struct FeedbackTests {
         #expect(!asked)
     }
 
+    private func query(_ url: URL) throws -> [String: String] {
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        return Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+    }
+
     @Test func buildsAPrefilledIssueURL() throws {
         let url = try #require(FeedbackView.issueURL(body: "Please add an iPad layout & widgets"))
-        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        #expect(components.host == "github.com")
-        #expect(components.path.hasSuffix("/issues/new"))
-        let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
-        #expect(items["body"] == "Please add an iPad layout & widgets")
+        #expect(url.host() == "github.com")
+        #expect(url.path().hasSuffix("/issues/new"))
+        let items = try query(url)
+        #expect(items["body"]?.hasPrefix("Please add an iPad layout & widgets") == true)
         #expect(items["labels"] == "feedback")
         #expect(FeedbackView.issueURL(body: "   ") == nil)
+    }
+
+    @Test func buildsAPrefilledMailURLToTheSupportAddress() throws {
+        let url = try #require(FeedbackView.mailURL(body: "Dark mode is too dark\nespecially the code blocks"))
+        #expect(url.scheme == "mailto")
+        #expect(url.absoluteString.contains(FeedbackView.supportEmail))
+        let items = try query(url)
+        // Subject is the first line only, so an inbox stays scannable.
+        #expect(items["subject"] == "PrivacyLLM: Dark mode is too dark")
+        #expect(items["body"]?.contains("especially the code blocks") == true)
+        #expect(FeedbackView.mailURL(body: " \n ") == nil)
+    }
+
+    @Test func bothDestinationsCarryTheVersionAndNothingElse() throws {
+        for destination in FeedbackDestination.allCases {
+            let url = try #require(FeedbackView.url(for: destination, body: "hello"))
+            let body = try #require(try query(url)["body"])
+            #expect(body.hasPrefix("hello"))
+            #expect(body.contains("PrivacyLLM"))
+        }
+        #expect(FeedbackView.emailHost == "langenskiold.se")
     }
 }
