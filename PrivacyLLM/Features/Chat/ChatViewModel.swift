@@ -22,7 +22,11 @@ nonisolated struct SessionStats: Sendable, Equatable {
     var isCompacting: Bool { contextWindow > 0 && contextUsed >= contextWindow }
 }
 
+// The stored state here — streaming buffers, voice timers, preference mirrors —
+// can't move to an extension, so the type is long by nature. Same call as
+// ChatView.
 @Observable
+// swiftlint:disable:next type_body_length
 final class ChatViewModel {
     enum Phase: Equatable {
         case idle
@@ -397,6 +401,28 @@ final class ChatViewModel {
 
     func exportPlainText() -> String {
         ConversationExporter.plainText(conversation: conversation, messages: messages)
+    }
+
+    /// Hides everything so far from the model without touching the transcript
+    /// (FR-48). The next turn starts from an empty context.
+    func clearContext() {
+        conversation.contextClearedAt = .now
+        conversation.updatedAt = .now
+        let updated = conversation
+        let store = environment.conversationStore
+        Task { try? await store.update(updated) }
+    }
+
+    /// True once there is something a context clear would actually discard.
+    var hasContextToClear: Bool {
+        guard let cleared = conversation.contextClearedAt else { return !messages.isEmpty }
+        return messages.contains { $0.createdAt >= cleared }
+    }
+
+    /// The first message the model can still see, used to draw the divider.
+    var firstMessageAfterClearID: UUID? {
+        guard let cleared = conversation.contextClearedAt else { return nil }
+        return messages.first { $0.createdAt >= cleared }?.id
     }
 
     /// Per-conversation persona override (FR-8); empty reverts to the global default.

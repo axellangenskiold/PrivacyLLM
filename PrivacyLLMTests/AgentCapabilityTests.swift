@@ -160,3 +160,70 @@ struct FeedbackTests {
         #expect(FeedbackView.emailHost == "langenskiold.se")
     }
 }
+
+struct ClearContextTests {
+    /// The orchestrator should send only what comes after the clear mark, while
+    /// the transcript itself is untouched (FR-48).
+    @Test func clearedMessagesAreHiddenFromTheModelButKeptOnDisk() async throws {
+        let database = try AppDatabase.inMemory()
+        let inference = MockInferenceService(tokenDelay: .milliseconds(1), scriptedReply: "ok")
+        var conversation = Conversation()
+        try await ConversationStore(database: database).insert(conversation)
+        let messageStore = MessageStore(database: database)
+        let orchestrator = ChatOrchestrator(
+            inference: inference,
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            messageStore: messageStore,
+            conversationStore: ConversationStore(database: database),
+            settingsStore: SettingsStore(database: database)
+        )
+
+        let old = Message(
+            conversationID: conversation.id,
+            role: .user,
+            content: "forget me",
+            createdAt: .now.addingTimeInterval(-60)
+        )
+        try await messageStore.append(old)
+        conversation.contextClearedAt = .now.addingTimeInterval(-30)
+
+        for await _ in await orchestrator.send(
+            text: "remember me",
+            conversation: conversation,
+            history: [old]
+        ) {}
+
+        let sent = try #require(await inference.lastInput)
+        let userTurns = sent.messages.filter { $0.role == .user }.map(\.content)
+        #expect(userTurns == ["remember me"])
+        // Still on disk: clearing context is not deleting the chat.
+        #expect(try await messageStore.fetchAll(conversationID: conversation.id).contains { $0.content == "forget me" })
+    }
+
+    @Test func withoutAClearMarkTheWholeHistoryGoes() async throws {
+        let database = try AppDatabase.inMemory()
+        let inference = MockInferenceService(tokenDelay: .milliseconds(1), scriptedReply: "ok")
+        let conversation = Conversation()
+        try await ConversationStore(database: database).insert(conversation)
+        let messageStore = MessageStore(database: database)
+        let orchestrator = ChatOrchestrator(
+            inference: inference,
+            modelManager: MockModelManager(downloadedModelIDs: [ModelSpec.previewFast.id]),
+            messageStore: messageStore,
+            conversationStore: ConversationStore(database: database),
+            settingsStore: SettingsStore(database: database)
+        )
+        let old = Message(
+            conversationID: conversation.id,
+            role: .user,
+            content: "keep me",
+            createdAt: .now.addingTimeInterval(-60)
+        )
+        try await messageStore.append(old)
+
+        for await _ in await orchestrator.send(text: "and me", conversation: conversation, history: [old]) {}
+
+        let sent = try #require(await inference.lastInput)
+        #expect(sent.messages.filter { $0.role == .user }.map(\.content) == ["keep me", "and me"])
+    }
+}

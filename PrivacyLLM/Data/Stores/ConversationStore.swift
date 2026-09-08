@@ -86,6 +86,7 @@ private nonisolated struct ConversationRecord: Codable, FetchableRecord, Persist
     var systemPromptEnc: Data?
     var createdAt: Double
     var updatedAt: Double
+    var contextClearedAt: Double?
 
     init(_ conversation: Conversation, encryption: EncryptionManager) throws {
         id = conversation.id.uuidString
@@ -94,6 +95,7 @@ private nonisolated struct ConversationRecord: Codable, FetchableRecord, Persist
         // Reference-date intervals are Date's native storage and round-trip exactly.
         createdAt = conversation.createdAt.timeIntervalSinceReferenceDate
         updatedAt = conversation.updatedAt.timeIntervalSinceReferenceDate
+        contextClearedAt = conversation.contextClearedAt?.timeIntervalSinceReferenceDate
     }
 
     func domainValue(encryption: EncryptionManager) throws -> Conversation {
@@ -102,7 +104,8 @@ private nonisolated struct ConversationRecord: Codable, FetchableRecord, Persist
             title: try encryption.decryptString(titleEnc),
             systemPrompt: try systemPromptEnc.map { try encryption.decryptString($0) },
             createdAt: Date(timeIntervalSinceReferenceDate: createdAt),
-            updatedAt: Date(timeIntervalSinceReferenceDate: updatedAt)
+            updatedAt: Date(timeIntervalSinceReferenceDate: updatedAt),
+            contextClearedAt: contextClearedAt.map(Date.init(timeIntervalSinceReferenceDate:))
         )
     }
 }

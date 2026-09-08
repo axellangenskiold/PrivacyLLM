@@ -109,6 +109,11 @@ nonisolated struct AppDatabase: Sendable {
                 t.column("occurredAt", .double).notNull()
             }
         }
+        migrator.registerMigration("v2-contextClearedAt") { db in
+            try db.alter(table: "conversations") { t in
+                t.add(column: "contextClearedAt", .double)
+            }
+        }
         return migrator
     }
 }

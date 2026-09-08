@@ -17,19 +17,24 @@ nonisolated struct Conversation: Identifiable, Hashable, Codable, Sendable {
     var systemPrompt: String?
     var createdAt: Date
     var updatedAt: Date
+    /// Everything before this is kept in the transcript but hidden from the
+    /// model — "clear context" without losing the chat (FR-48).
+    var contextClearedAt: Date?
 
     init(
         id: UUID = UUID(),
         title: String = String(localized: "New Chat"),
         systemPrompt: String? = nil,
         createdAt: Date = .now,
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        contextClearedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
         self.systemPrompt = systemPrompt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.contextClearedAt = contextClearedAt
     }
 }
 

@@ -89,7 +89,13 @@ actor ChatOrchestrator {
         continuation: AsyncStream<ChatTurnEvent>.Continuation
     ) async {
         isCancelled = false
-        var fullHistory = history
+        // "Clear context" keeps the transcript but hides everything before the
+        // mark from the model (FR-48).
+        var fullHistory = if let cleared = conversation.contextClearedAt {
+            history.filter { $0.createdAt >= cleared }
+        } else {
+            history
+        }
         if let newUserText {
             let trimmed = newUserText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
