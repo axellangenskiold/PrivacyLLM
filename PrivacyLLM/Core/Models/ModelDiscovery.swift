@@ -27,6 +27,11 @@ nonisolated enum ModelDiscovery {
         "-vl-", "vision", "audio", "whisper", "-tts", "embed", "bge-", "clip",
         "siglip", "rerank", "diffusion", "flux", "stable-", "-sd-", "guard",
         "-base", "coder-base", "vlm", "omni", "image",
+        // Safety-stripped conversions. The Hub is full of them and a couple
+        // trend at any given time; offering them from a catalog we curate is an
+        // App Store review problem (1.1.1 objectionable content) as much as a
+        // taste one. Importing one by hand stays the user's call.
+        "uncensored", "abliterated", "nsfw", "unaligned", "unfiltered",
     ]
 
     /// Bigger than this is not a phone model, however well it converts.
