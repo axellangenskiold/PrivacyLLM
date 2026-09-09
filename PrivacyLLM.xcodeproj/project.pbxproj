@@ -21,13 +21,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		1AB68700000000000000010C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1AB685562FD9FB02000548D4 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1AB687000000000000000106;
-			remoteInfo = PrivacyLLMWidgets;
-		};
 		1AB6856E2FD9FB05000548D4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1AB685562FD9FB02000548D4 /* Project object */;
@@ -41,6 +34,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1AB6855D2FD9FB03000548D4;
 			remoteInfo = PrivacyLLM;
+		};
+		1AB68700000000000000010C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1AB685562FD9FB02000548D4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1AB687000000000000000106;
+			remoteInfo = PrivacyLLMWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -137,6 +137,7 @@
 				1AB685702FD9FB05000548D4 /* PrivacyLLMTests */,
 				1AB6857A2FD9FB05000548D4 /* PrivacyLLMUITests */,
 				1AB6855F2FD9FB03000548D4 /* Products */,
+				1AC2957E305172CB00D74AE4 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -149,6 +150,14 @@
 				1AB687000000000000000101 /* PrivacyLLMWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1AC2957E305172CB00D74AE4 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				1AB687000000000000000102 /* PrivacyLLMWidgets */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

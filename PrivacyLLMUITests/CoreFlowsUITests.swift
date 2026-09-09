@@ -49,8 +49,7 @@ final class CoreFlowsUITests: XCTestCase {
 
         let input = app.textFields["Message input"]
         XCTAssertTrue(input.waitForExistence(timeout: 5))
-        input.tap()
-        input.typeText("Tell me something long")
+        input.tapAndType("Tell me something long")
         app.buttons["Send message"].tap()
 
         let stop = app.buttons["Stop generating"]
@@ -74,8 +73,7 @@ final class CoreFlowsUITests: XCTestCase {
 
         // Build up enough content to scroll, then stream a third reply.
         for index in 0..<3 {
-            input.tap()
-            input.typeText("Message number \(index)")
+            input.tapAndType("Message number \(index)")
             app.buttons["Send message"].tap()
             if index < 2 {
                 XCTAssertTrue(app.buttons["Dictate message"].waitForExistence(timeout: 15))
