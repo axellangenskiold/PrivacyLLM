@@ -1,26 +1,33 @@
-# App Store Connect — New Version Submission (v1.1)
+# App Store Connect — New Version Submission (v1.2)
 
-Copy-paste blocks for submitting the **update** in App Store Connect
-(App Store → your app → **(+) Version or Platform**). Char limits are ASC's;
-it shows a live counter as you paste. Fields marked **⟨fill in⟩** are personal
-to you and can't be prefilled.
+Copy-paste blocks for submitting the update in App Store Connect
+(App Store → your app → **(+) Version or Platform**). Char limits are ASC's.
+Fields marked **⟨fill in⟩** are personal to you and can't be prefilled.
 
-Current shipped version: **1.0 (build 1)**. This update: **1.1**.
+Shipped so far: **1.0**, then **1.1**. This update: **1.2 (build 3)**.
 
 ---
 
-## 0. Before you touch ASC (in Xcode)
+## 0. Before you touch ASC
 
-- [ ] Bump **MARKETING_VERSION** `1.0` → **`1.1`** (target → General → Version).
-- [ ] Bump **build number** `1` → **`2`** (CURRENT_PROJECT_VERSION / Build).
-- [ ] Archive (Product → Archive, Release) and upload with the Organizer or
-      `xcrun altool`/Transporter.
-- [ ] Wait for the build to finish processing in ASC, then select it in the
-      new version (below).
+Already done in the repo (commit on `main`):
 
-Nothing else in the project needs to change — no new permissions, no new
-entitlements. (Dictation already declares mic + speech usage strings;
-text-to-speech playback needs no permission.)
+- [x] `MARKETING_VERSION` → **1.2** on the app **and** the widget target.
+- [x] `CURRENT_PROJECT_VERSION` → **3** on both. Deliberately skipping 2 in case
+      1.1 shipped as build 2 — build numbers must increase, not be contiguous.
+      **Check ASC's build list first**; if 3 is taken, go higher.
+
+New this version and worth knowing before you archive:
+
+- **New target: `PrivacyLLMWidgets`** (bundle id `com.axellangenskiold.PrivacyLLM.Widgets`).
+  First archive registers the App ID under automatic signing. If it fails,
+  Xcode → Settings → Accounts → Download Manual Profiles, then retry.
+- **Four new permission prompts**: Calendar (write-only), Reminders, Face ID,
+  Notifications. Usage strings for the first three are in the build settings;
+  notifications need none.
+- **No new entitlements.** Background downloads use a background `URLSession`,
+  which needs no `UIBackgroundModes`. Only the existing increased-memory-limit
+  entitlement is present.
 
 ---
 
@@ -29,37 +36,45 @@ text-to-speech playback needs no permission.)
 ### What's New in This Version  (≤4000)
 
 ```
-NEW: Voice Memos & Podcasts
-Turn any text, a PDF, or a whole conversation into audio you can listen to — generated entirely on your iPhone. Choose a voice quality, then play it back like a podcast, and it picks up right where you left off. Forwarded conversations are read back as a natural, two-voice exchange.
+NEW: Your assistant can do things now
+Ask it to add a calendar event, set a reminder, or start a call or text. Everything happens on your iPhone, and iOS still asks you before anything is dialled or sent. Off by default — turn it on in Settings.
 
-Better voice dictation
-Dictation now stops on its own when you finish speaking, then shows what it heard with a Send button so you can review before sending.
+NEW: It remembers you
+The assistant can save a handful of short facts about you and use them in every chat. You can read them, delete them, or switch the whole thing off in Settings.
 
-NEW: Session Info
-Open the ⋯ menu in any chat to see how much of the context window you're using, how many tokens you've used and generated, and how many web searches were made.
+NEW: More models, always current
+The model list now updates itself from Hugging Face, so new models appear without waiting for an app update.
 
-Smarter context
-Each chat now sizes its memory to the model you're running, so longer conversations stay coherent.
+NEW: Home screen widget, Face ID, and search
+Add a widget for one-tap access. Lock the app behind Face ID. Search across every chat you've had.
 
-As always: no cloud, no accounts, no tracking. Everything runs on your device.
+Cooler and faster
+The app now frees the model when you stop chatting and eases off when your iPhone gets warm — less heat, better battery. Downloads keep going after you close the app, and replies can finish in the background and notify you.
+
+Shorter answers, cleaner chats
+Replies are much more concise. You can clear a chat's context without losing the conversation, and delete several chats at once.
+
+Fixed: imported PDFs are now actually used when answering. Sorry about that one.
+
+As always: no cloud, no accounts, no tracking.
 ```
 
 ### Promotional Text  (≤170, editable anytime without review)
 
 ```
-New: turn any text, PDF, or conversation into podcast-style audio, generated entirely on your iPhone. Still no cloud, no accounts, no tracking — nothing leaves your device.
+New: your assistant can add calendar events, set reminders and start calls — all on your iPhone. Plus a widget, Face ID, chat search, and a model list that stays current.
 ```
 
 ### Keywords  (≤100, comma-separated, no spaces)
 
 ```
-offline,local,llm,on-device,assistant,pdf,tts,audio,voice,podcast,secure,encrypted,notracking
+offline,local,llm,on-device,assistant,pdf,calendar,reminders,widget,faceid,secure,notracking,voice
 ```
 
 > Words already in the app name/subtitle (private, ai, chat) are indexed for
 > free — don't repeat them.
 
-### Description  (≤4000 — updated to include Voice Memos; paste the whole block)
+### Description  (≤4000 — full replacement)
 
 ```
 PrivacyLLM is a complete AI assistant that runs entirely on your iPhone. No cloud. No accounts. No tracking. Your conversations, your documents, and the model's reasoning never leave your device — because there's no server for them to go to.
@@ -75,15 +90,17 @@ PRIVATE BY DESIGN
 WHAT IT DOES
 • Chat with a fast, modern assistant — replies stream in token by token, with full Markdown and syntax-highlighted code.
 • Fast and Thinking modes: switch between a quick model and a more deliberate one that shows its reasoning before it answers.
-• Voice Memos & podcasts: turn any text, a PDF, or a whole conversation into audio and listen on-device — with playback that resumes right where you left off, and conversations read back in two voices.
+• Gets things done: add a calendar event, set a reminder, or start a call or text, just by asking. Off by default, and iOS confirms before anything is dialled or sent.
+• Remembers you: a few short facts, used in every chat, visible and deletable in Settings.
 • Chat with your PDFs: import a document and ask questions about it. The text is extracted and indexed on-device, and the answer tells you which section it came from.
-• Optional web search: when you turn it on, only short keyword queries go to a privacy-respecting search engine (DuckDuckGo by default) — never your conversation. A clear indicator shows whenever a search goes out, and search is OFF by default.
-• Voice input: dictate messages using Apple's on-device speech recognition. Dictation stops automatically when you finish, so you can review before sending. No audio ever leaves your phone.
-• Session info: see your context-window usage, token counts, and web-search count for any chat.
-• Multiple conversations, encrypted on disk with iOS Data Protection.
+• Voice Memos & podcasts: turn any text, a PDF, or a whole conversation into audio and listen on-device, with playback that resumes where you left off.
+• Optional web search: when you turn it on, only short keyword queries go to a privacy-respecting search engine (DuckDuckGo by default) — never your conversation. Search is OFF by default.
+• Voice input: dictate messages using Apple's on-device speech recognition. No audio ever leaves your phone.
+• Search every chat, clear a chat's context without losing it, and see your context and token usage any time.
 
 YOU'RE IN CONTROL
-• Choose your model and download it once, directly to your device. You can even bring your own.
+• Choose your model and download it once, directly to your device. The list stays current, and you can bring your own.
+• Lock the app behind Face ID. Add a home screen widget for one tap in.
 • Everything is stored locally and encrypted, readable only on your iPhone.
 • Open and inspectable — you don't have to take our word for any of this.
 
@@ -95,31 +112,23 @@ REQUIREMENTS
 A recent iPhone with enough memory is recommended for the larger models. A network connection is needed only for the one-time model download and for optional web search.
 ```
 
-> The description carries over from 1.0 with a Voice Memos bullet, an updated
-> voice-input line, and a session-info line added. If you'd rather not
-> re-submit the description for review, you can leave it unchanged — only
-> **What's New** is required for an update.
-
 ### Screenshots / Preview
 
-- [ ] Optional but recommended: add 1–2 screenshots showing **Voice Memos** and
-      the **Session Info** sheet so the headline features are visible on the
-      product page. Existing 6.5" (1242×2688) screenshots remain valid; you can
-      regenerate with `Scripts/screenshots.sh`.
-- Not required to change if you're happy with the current set.
+- Existing 6.5" (1242×2688) screenshots stay valid — **do not** upload 6.9"
+  1320×2868; ASC rejected those for this app.
+- Recommended but optional: regenerate with `Scripts/screenshots.sh` and add
+  shots of the widget and Device Actions.
 
-### Support / Marketing / Privacy URLs  (carry over from 1.0)
+### Support / Marketing / Privacy URLs  (carry over)
 
-- Support URL: **⟨fill in — same as 1.0⟩**
+- Support URL: **⟨fill in — same as 1.1⟩**
 - Marketing URL (optional): **⟨fill in or leave blank⟩**
-- Privacy Policy URL: **⟨fill in — host Docs/PRIVACY_POLICY.md; same as 1.0⟩**
+- Privacy Policy URL: **⟨fill in — same as 1.1⟩**
 
 ### Version Release
 
-- [ ] **Automatically release this version** after approval (recommended), or
-      choose **Manually release** if you want to control the moment it goes live.
-- [ ] Phased Release for automatic updates: **on** (recommended — rolls out over
-      7 days, easy to pause if something's wrong).
+- [ ] **Automatically release after approval** (recommended), with **Phased
+      Release on** — 7-day rollout, pausable.
 
 ---
 
@@ -140,66 +149,65 @@ No — the app has no accounts, login, or credentials.
 ### Notes for Review  (paste)
 
 ```
-PrivacyLLM is a private AI assistant that runs entirely on the user's iPhone. No account or login is required.
+PrivacyLLM is a private AI assistant that runs entirely on the user's iPhone. No account or login is required. All AI inference happens on-device; there is no third-party AI service, no analytics, and no backend.
 
-WHAT CHANGED IN THIS VERSION (1.1)
-- New "Voice Memos" feature: the user can turn pasted text, an imported PDF, or a whole conversation into an audio file. All text-to-speech is generated on-device using Apple's AVSpeechSynthesizer; nothing is uploaded. Audio is stored locally and protected with iOS Data Protection.
-- Voice dictation now auto-stops on a pause in speech and lets the user review the transcript before sending.
-- A new "Session Info" sheet shows on-device context-window usage and token/web-search counts.
-No new network access and no new permissions were added.
+WHAT CHANGED IN 1.2
 
-HOW TO REACH THE NEW FEATURE
-1. Complete the brief onboarding and, on the model screen, download the recommended model over Wi-Fi (one-time, ~1.8 GB) — required before chatting.
-2. On the main screen, tap the waveform button (next to New Chat) to open Voice Memos, then "+" to create one. Paste any text (or import a PDF), pick a voice quality, and tap Generate. The audio plays back in-app.
-3. You can also open any chat's "..." menu → "Convert to Voice Memo".
-4. Session Info: open any chat → "..." menu → "Session Info".
+1) DEVICE ACTIONS (new permissions). The assistant can add a calendar event, add a reminder, or open the dialler/Messages with a number the user asked for. This is OFF by default and must be enabled in Settings > Device > Device Actions. Calendar access is WRITE-ONLY (the app never reads existing events). Calls and texts are handed to iOS via tel: and sms: URLs, so the system asks the user to confirm before anything is dialled or sent — the app cannot place a call on its own.
 
-PRIVACY / EXTERNAL SERVICES (unchanged from 1.0)
-- All AI inference and text-to-speech happen on-device. There is no third-party AI/LLM service, analytics, or backend.
-- The only network activity is: (a) a one-time model-file download from Hugging Face (data, not code; no user data sent), and (b) optional, user-initiated web search via DuckDuckGo, which receives short keyword queries only — never conversation or document content. Web search is OFF by default and shows an on-screen indicator when used.
-- This build contains NO in-app purchases.
+2) USER MEMORY. The assistant can save up to 12 short facts about the user (max 140 characters each) and include them in later chats. Stored on-device only, listed in Settings > Memory, individually deletable, and switchable off.
+
+3) MODEL LIST FROM HUGGING FACE. The model catalog can be refreshed from Hugging Face's public listing (Models > ... > Refresh from Hugging Face). This only ever happens when the user taps it. Only model metadata is requested; no user data is sent. The list is filtered to quantized text-generation models that fit a phone, and repos whose names indicate safety-stripped conversions (uncensored, abliterated, unfiltered, NSFW) are excluded. Downloaded files are model weights — data, not executable code — as in 1.0 and 1.1.
+
+4) HOME SCREEN WIDGET (new app extension, com.axellangenskiold.PrivacyLLM.Widgets). It deliberately displays no conversation content, since widgets render on the lock screen. It is a launcher.
+
+5) FACE ID (new permission). Optional app lock with the device passcode as fallback. Nothing biometric is stored or transmitted; it uses LocalAuthentication only.
+
+6) NOTIFICATIONS (new permission). A local notification when a reply finishes while the user is out of the app. Local only — the app never registers with APNs and has no push server.
+
+7) BACKGROUND DOWNLOADS. Model weights now transfer on a background URLSession so a large download survives leaving the app. No new background modes were added.
+
+HOW TO REACH THE NEW FEATURES
+1. Complete the brief onboarding (it is skippable) and download the recommended model over Wi-Fi (one-time, ~1.8 GB) — required before chatting.
+2. Device actions: Settings > Device > turn on Device Actions. Then in a chat ask "add a dentist appointment tomorrow at 3pm". iOS will prompt for calendar permission the first time.
+3. Memory: tell the assistant something about yourself ("I live in Stockholm"), then open Settings > Memory to see and delete what it saved.
+4. Model list: Models > "..." > Refresh from Hugging Face.
+5. Widget: long-press the home screen > add PrivacyLLM.
+6. Face ID: Settings > Device > Require Face ID.
+
+PRIVACY / EXTERNAL SERVICES
+The only network activity is: (a) model file downloads and the model-list refresh from huggingface.co (no user data sent), and (b) optional, user-initiated web search via DuckDuckGo, which receives short keyword queries only — never conversation or document content. Search is OFF by default and shows an on-screen indicator when used. In-app feedback opens a prefilled GitHub issue or a prefilled email in the user's own apps; the app sends nothing itself.
+
+This build contains NO in-app purchases.
 
 Enabling Airplane Mode after the model is downloaded demonstrates that chat, document Q&A, voice memos, and dictation all work fully offline.
 ```
 
-> Full background (devices tested, model licenses) is in
-> `Docs/APP_REVIEW_NOTES.txt` if the reviewer asks — but note that file
-> mentions optional tips; this build ships with **no in-app purchases**
-> (`FeatureFlags.json → donations: false`), so don't reference tips in the
-> notes above.
+---
 
-### Attachment (optional)
+## 3. Declarations to re-confirm
 
-- Not needed. (Only add one if a reviewer specifically requests a demo video.)
+- **Export Compliance:** `ITSAppUsesNonExemptEncryption = NO` is set, so ASC
+  should not prompt. If it does: uses encryption = **Yes**, qualifies for
+  **exemption** = **Yes** (Apple CryptoKit + HTTPS only).
+- **App Privacy label:** unchanged — **Data Not Collected**. Nothing new
+  collects anything. Feedback hands text to GitHub or Mail on a user tap; the
+  model-list refresh sends no user data.
+- **Content Rights:** the binary contains no third-party content. Model weights
+  download at runtime under permissive licences, attributed in-app.
+- **IDFA:** No.
+- **Age Rating:** unchanged from 1.1. Only revisit if ASC flags it.
 
 ---
 
-## 3. Declarations you'll re-confirm each submission
+## 4. Submit checklist
 
-- **Export Compliance / Encryption:** already answered by the build —
-  `ITSAppUsesNonExemptEncryption = NO` is set in Info.plist, so ASC should not
-  prompt. If it does: the app uses encryption = **Yes**; it qualifies for the
-  **exemption** = **Yes** (only Apple CryptoKit + HTTPS/TLS — standard,
-  exempt). No CCATS/year-end report needed.
-- **Content Rights:** the app does **not** contain, show, or access
-  third-party content in the binary. (Open-weights models are downloaded at
-  runtime under permissive licenses, with attribution shown in-app — same as
-  1.0.)
-- **Advertising Identifier (IDFA):** **No** — the app does not use the
-  advertising identifier.
-- **Age Rating:** unchanged from 1.0 (no new content that affects it). Only
-  revisit if ASC flags it.
-
----
-
-## 4. Final submit checklist
-
-- [ ] Build 1.1 (2) uploaded and selected for the version.
+- [ ] Build number is higher than anything already in ASC.
+- [ ] Archive uploaded and processed, then selected for the version.
 - [ ] What's New pasted.
-- [ ] Promotional Text / Keywords / Description updated (or intentionally left
-      as-is).
+- [ ] Promotional Text / Keywords / Description updated.
 - [ ] Support & Privacy Policy URLs present.
-- [ ] Review contact info filled in; Notes for Review pasted.
+- [ ] Review contact filled in; Notes for Review pasted.
 - [ ] Export compliance, content rights, IDFA answered.
-- [ ] Release option chosen (automatic + phased recommended).
+- [ ] Release option chosen (automatic + phased).
 - [ ] **Add for Review → Submit.**

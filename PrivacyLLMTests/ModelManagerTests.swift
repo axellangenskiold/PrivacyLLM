@@ -352,6 +352,8 @@ struct ModelDiscoveryTests {
             "mlx-community/Qwen3.5-32B-4bit",     // far too big
             "mlx-community/Qwen3.5-4B",           // unquantized
             "mlx-community/Llama-3.2-3B-base-4bit", // base, not instruct
+            "mlx-community/Qwen3-8B-Uncensored-4bit", // safety-stripped
+            "mlx-community/Llama-3.1-8B-abliterated-4bit",
         ]
         for repo in rejected {
             #expect(ModelDiscovery.spec(from: summary(repo)) == nil, "should have skipped \(repo)")

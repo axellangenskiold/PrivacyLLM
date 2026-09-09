@@ -15,8 +15,7 @@ final class ChatFlowUITests: XCTestCase {
 
         let input = app.textFields["Message input"]
         XCTAssertTrue(input.waitForExistence(timeout: 5))
-        input.tap()
-        input.typeText("Hello from the UI test")
+        input.tapAndType("Hello from the UI test")
         app.buttons["Send message"].tap()
 
         // The mock model's canned reply renders this markdown heading (FR-1/FR-5).
