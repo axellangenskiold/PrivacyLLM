@@ -76,7 +76,11 @@ struct ModelDownloaderTests {
         let session = HuggingFaceAPI.makeSession(protocolClasses: [HFMockURLProtocol.self])
         let base = FileManager.default.temporaryDirectory.appending(path: "model-tests-\(UUID().uuidString)")
         let store = ModelStore(baseDirectory: base)
-        let downloader = ModelDownloader(api: HuggingFaceAPI(session: session), store: store, chunkSize: 64 * 1024)
+        let downloader = ModelDownloader(
+            api: HuggingFaceAPI(session: session),
+            store: store,
+            transfers: SessionTransfers(session: session, chunkSize: 64 * 1024)
+        )
         return (downloader, store, spec)
     }
 
@@ -303,5 +307,69 @@ struct ModelSortingTests {
         ]
         // Equal on every key → alphabetical, deterministically.
         #expect(ModelSortOrder.parameterSize.sorted(specs).map(\.id) == ["Atlas", "Zephyr"])
+    }
+}
+
+struct ModelDiscoveryTests {
+    /// The listing endpoint sends createdAt, not lastModified.
+    private func summary(_ id: String, createdAt: String? = "2026-08-01T10:00:00.000Z") -> HFModelSummary {
+        HFModelSummary(id: id, downloads: 1000, likes: 10, createdAt: createdAt, lastModified: nil, tags: nil)
+    }
+
+    @Test func readsParametersWithoutTrippingOverVersionsOrQuantization() {
+        #expect(ModelDiscovery.parameterCount(in: "Qwen3.5-4B-4bit") == "4B")
+        #expect(ModelDiscovery.parameterCount(in: "Llama-3.2-1B-Instruct-4bit") == "1B")
+        #expect(ModelDiscovery.parameterCount(in: "Qwen3-0.6B-8bit") == "0.6B")
+        // Lowercase b is only a parameter count when a separator follows it.
+        #expect(ModelDiscovery.parameterCount(in: "gemma-4-e2b-it-4bit") == "2B")
+        #expect(ModelDiscovery.parameterCount(in: "some-model-4bit") == nil)
+    }
+
+    @Test func buildsAUsableSpecFromARepoName() throws {
+        let spec = try #require(ModelDiscovery.spec(from: summary("mlx-community/Qwen3.5-4B-4bit")))
+        #expect(spec.hfRepo == "mlx-community/Qwen3.5-4B-4bit")
+        #expect(spec.parameterCount == "4B")
+        #expect(spec.quantization == "4-bit")
+        #expect(spec.family == "qwen3.5")
+        #expect(spec.roles == [.thinking])
+        #expect(spec.releaseDate == "2026-08-01")
+        #expect(spec.minRAMGB >= 4)
+        // The id doubles as an on-disk directory name.
+        #expect(!spec.id.contains("/"))
+        #expect(spec.capabilities.nativeThinking)
+    }
+
+    @Test func smallModelsAlsoTakeTheFastRole() throws {
+        let spec = try #require(ModelDiscovery.spec(from: summary("mlx-community/Llama-3.2-1B-Instruct-4bit")))
+        #expect(spec.roles.contains(.fast))
+    }
+
+    @Test func skipsWhatCannotChatOnAPhone() {
+        let rejected = [
+            "mlx-community/Qwen3-VL-8B-4bit",     // vision
+            "mlx-community/bge-small-en-4bit",    // embeddings
+            "mlx-community/whisper-large-4bit",   // audio
+            "mlx-community/Qwen3.5-32B-4bit",     // far too big
+            "mlx-community/Qwen3.5-4B",           // unquantized
+            "mlx-community/Llama-3.2-3B-base-4bit", // base, not instruct
+        ]
+        for repo in rejected {
+            #expect(ModelDiscovery.spec(from: summary(repo)) == nil, "should have skipped \(repo)")
+        }
+    }
+
+    @Test func estimatesSizeInTheRightBallpark() throws {
+        // The hand-written catalog says Qwen3.5-2B-4bit is 1.75 GB on disk.
+        let spec = try #require(ModelDiscovery.spec(from: summary("mlx-community/Qwen3.5-2B-4bit")))
+        let gigabytes = Double(spec.sizeBytes) / 1_073_741_824
+        #expect(gigabytes > 1.3 && gigabytes < 2.0)
+    }
+
+    @Test func dropsDuplicatesAndHonoursTheLimit() {
+        let specs = ModelDiscovery.specs(
+            from: [summary("mlx-community/Qwen3.5-2B-4bit"), summary("mlx-community/Qwen3.5-2B-4bit")],
+            limit: 40
+        )
+        #expect(specs.count == 1)
     }
 }

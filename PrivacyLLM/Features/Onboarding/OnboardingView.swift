@@ -25,6 +25,12 @@ struct OnboardingView: View {
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .pvScreen()
+        .overlay(alignment: .topTrailing) {
+            Button("Skip") { onComplete() }
+                .font(PVFont.footnote)
+                .foregroundStyle(Color.pvTextSecondary)
+                .padding(PVSpacing.l)
+        }
         .task { modelsViewModel.start() }
         .onDisappear { modelsViewModel.stopObserving() }
     }

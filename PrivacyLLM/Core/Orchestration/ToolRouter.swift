@@ -12,12 +12,13 @@ nonisolated struct ToolRouter: Sendable {
         self.settingsStore = settingsStore
     }
 
-    /// Specs advertised to the model. Egress tools are omitted entirely while
-    /// search is off, so the model never tries to call them (FR-18).
-    func specs(includeEgressTools: Bool) -> [ToolSpec] {
+    /// Specs advertised to the model. Gated tools are omitted entirely while
+    /// their switch is off, so the model never tries to call them (FR-18/42).
+    func specs(includeEgressTools: Bool, includeDeviceActions: Bool = false) -> [ToolSpec] {
         toolsByName.values
             .map(\.spec)
             .filter { includeEgressTools || !$0.causesEgress }
+            .filter { includeDeviceActions || !$0.causesDeviceAction }
             .sorted { $0.name < $1.name }
     }
 
@@ -45,6 +46,17 @@ nonisolated struct ToolRouter: Sendable {
                     callID: call.id,
                     toolName: call.name,
                     content: "Web access is disabled by the user. Answer from your own knowledge and say that live results were unavailable.",
+                    isError: true
+                )
+            }
+        }
+        if tool.spec.causesDeviceAction {
+            let allowed = (try? await settingsStore.deviceActionsEnabled()) ?? false
+            guard allowed else {
+                return ToolResult(
+                    callID: call.id,
+                    toolName: call.name,
+                    content: "Device actions are switched off. Tell the user what you would have done and that they can enable Device actions in Settings.",
                     isError: true
                 )
             }

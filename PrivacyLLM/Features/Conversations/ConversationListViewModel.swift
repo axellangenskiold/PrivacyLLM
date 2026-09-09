@@ -4,6 +4,7 @@ import Observation
 @Observable
 final class ConversationListViewModel {
     private(set) var conversations: [Conversation] = []
+    var query = ""
     private let store: ConversationStore
 
     init(environment: AppEnvironment) {
@@ -11,7 +12,7 @@ final class ConversationListViewModel {
     }
 
     func refresh() async {
-        conversations = (try? await store.fetchAll()) ?? []
+        conversations = (try? await store.search(query)) ?? []
     }
 
     func create() async -> Conversation? {
@@ -37,6 +38,13 @@ final class ConversationListViewModel {
 
     func delete(_ conversation: Conversation) async {
         try? await store.delete(conversation.id)
+        await refresh()
+    }
+
+    func delete(ids: Set<UUID>) async {
+        for id in ids {
+            try? await store.delete(id)
+        }
         await refresh()
     }
 }

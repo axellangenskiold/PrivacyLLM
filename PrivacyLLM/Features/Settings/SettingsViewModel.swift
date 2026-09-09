@@ -32,6 +32,34 @@ final class SettingsViewModel {
         didSet { persist(contextLength, for: .contextLength, ifChanged: oldValue != contextLength) }
     }
 
+    /// Device actions (calendar, reminders, calls) are opt-in (FR-42).
+    var deviceActionsEnabled = false {
+        didSet { persist(deviceActionsEnabled, for: .deviceActionsEnabled, ifChanged: oldValue != deviceActionsEnabled) }
+    }
+
+    /// Face ID / passcode gate (OD-8). Only ever turned on after a successful
+    /// check, so nobody can lock themselves out by tapping a switch.
+    var appLockEnabled = false {
+        didSet {
+            guard loaded, oldValue != appLockEnabled else { return }
+            guard appLockEnabled else {
+                persist(false, for: .appLockEnabled, ifChanged: true)
+                return
+            }
+            Task { @MainActor in
+                if await AppLock.authenticate(reason: String(localized: "Turn on the app lock")) {
+                    persist(true, for: .appLockEnabled, ifChanged: true)
+                } else {
+                    appLockEnabled = false
+                }
+            }
+        }
+    }
+
+    var memoryEnabled = true {
+        didSet { persist(memoryEnabled, for: .memoryEnabled, ifChanged: oldValue != memoryEnabled) }
+    }
+
     var appearance = AppearanceSetting.system {
         didSet {
             guard oldValue != appearance else { return }
@@ -45,6 +73,7 @@ final class SettingsViewModel {
     private(set) var activeFastID: String?
     private(set) var activeThinkingID: String?
     private(set) var recentEgressEvents: [EgressEvent] = []
+    private(set) var memoryFacts: [String] = []
     private(set) var loaded = false
 
     /// Llama 3.2 Community License (§1.b.i) requires a visible "Built with Llama"
@@ -76,6 +105,10 @@ final class SettingsViewModel {
         maxTokens = sampling.maxTokens
         contextLength = (try? await settings.contextLength()) ?? 0
         appearance = (try? await settings.value(for: .appearance, default: AppearanceSetting.system)) ?? .system
+        deviceActionsEnabled = (try? await settings.deviceActionsEnabled()) ?? false
+        appLockEnabled = (try? await settings.appLockEnabled()) ?? false
+        memoryEnabled = await environment.userMemory.isEnabled()
+        await refreshMemory()
         await refreshModels()
         await refreshEgressEvents()
         loaded = true
@@ -105,6 +138,36 @@ final class SettingsViewModel {
         Task {
             try? await environment.egressEventStore.deleteAll()
             await refreshEgressEvents()
+        }
+    }
+
+    var appLockAvailable: Bool { AppLock.isAvailable }
+
+    /// Frees the model's memory now instead of waiting for the idle timer.
+    func unloadModel() {
+        let inference = environment.inference
+        Task { await inference.unloadModel() }
+    }
+
+    // MARK: Memory (FR-43)
+
+    func refreshMemory() async {
+        memoryFacts = await environment.userMemory.facts()
+    }
+
+    func deleteMemory(atOffsets offsets: IndexSet) {
+        let memory = environment.userMemory
+        Task {
+            await memory.remove(atOffsets: offsets)
+            await refreshMemory()
+        }
+    }
+
+    func clearMemory() {
+        let memory = environment.userMemory
+        Task {
+            await memory.clear()
+            await refreshMemory()
         }
     }
 

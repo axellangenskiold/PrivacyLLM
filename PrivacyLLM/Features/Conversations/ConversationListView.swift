@@ -16,6 +16,10 @@ struct ConversationListView: View {
     @State private var path: [AppRoute] = []
     @State private var renameTarget: Conversation?
     @State private var renameText = ""
+    @State private var editMode: EditMode = .inactive
+    @State private var selection = Set<UUID>()
+    @State private var showFeedback = false
+    @State private var askForFeedback = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -23,7 +27,8 @@ struct ConversationListView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        @Bindable var viewModel = viewModel
+        return NavigationStack(path: $path) {
             content
                 .navigationTitle("PrivacyLLM")
                 .toolbar {
@@ -43,6 +48,11 @@ struct ConversationListView: View {
                                 path.append(.settings)
                             } label: {
                                 Label("Settings", systemImage: "gearshape")
+                            }
+                            Button {
+                                showFeedback = true
+                            } label: {
+                                Label("Feedback", systemImage: "bubble.left.and.exclamationmark.bubble.right")
                             }
                             if FeatureFlags.current.isEnabled(.donations) {
                                 Button {
@@ -70,6 +80,26 @@ struct ConversationListView: View {
                             Label("New Chat", systemImage: "square.and.pencil")
                         }
                     }
+                    if !viewModel.conversations.isEmpty {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(isSelecting ? "Done" : "Select") { toggleSelecting() }
+                        }
+                    }
+                    if isSelecting {
+                        ToolbarItem(placement: .bottomBar) {
+                            Button(role: .destructive) {
+                                deleteSelected()
+                            } label: {
+                                Label(
+                                    selection.isEmpty ? "Delete" : "Delete (\(selection.count))",
+                                    systemImage: "trash"
+                                )
+                            }
+                            .tint(.red)
+                            .disabled(selection.isEmpty)
+                            .accessibilityIdentifier("delete-selected-chats")
+                        }
+                    }
                 }
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
@@ -87,7 +117,8 @@ struct ConversationListView: View {
                         DonateView()
                     }
                 }
-                .task { await viewModel.refresh() }
+                .searchable(text: $viewModel.query, prompt: "Search chats")
+                .task(id: viewModel.query) { await viewModel.refresh() }
                 .onChange(of: path) { _, newPath in
                     // Titles change after the first message; refresh when returning.
                     if newPath.isEmpty {
@@ -99,12 +130,34 @@ struct ConversationListView: View {
                     Button("Save") { confirmRename() }
                     Button("Cancel", role: .cancel) {}
                 }
+                .alert("Anything you'd like in the app?", isPresented: $askForFeedback) {
+                    Button("Tell us") { showFeedback = true }
+                    Button("Not now", role: .cancel) {}
+                } message: {
+                    Text("It goes straight to the developer.")
+                }
+                .sheet(isPresented: $showFeedback) {
+                    FeedbackView(environment: environment)
+                }
+                .task {
+                    askForFeedback = await FeedbackPrompt(
+                        settingsStore: environment.settingsStore
+                    ).registerLaunchAndShouldAsk()
+                }
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.conversations.isEmpty {
+        if viewModel.conversations.isEmpty, !viewModel.query.isEmpty {
+            PVEmptyState(
+                icon: "magnifyingglass",
+                title: "No matches",
+                message: "Nothing in your chats mentions that."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .pvScreen()
+        } else if viewModel.conversations.isEmpty {
             VStack(spacing: 0) {
                 PVEmptyState(
                     icon: "bubble.left.and.bubble.right",
@@ -118,7 +171,7 @@ struct ConversationListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvScreen()
         } else {
-            List {
+            List(selection: $selection) {
                 ForEach(viewModel.conversations) { conversation in
                     NavigationLink(value: AppRoute.chat(conversation)) {
                         row(for: conversation)
@@ -130,6 +183,9 @@ struct ConversationListView: View {
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                        // The app tint is emerald; destructive swipe actions
+                        // inherit it, so say red explicitly.
+                        .tint(.red)
                     }
                     .contextMenu {
                         Button {
@@ -147,6 +203,7 @@ struct ConversationListView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .environment(\.editMode, $editMode)
             .pvScreen()
         }
     }
@@ -175,6 +232,21 @@ struct ConversationListView: View {
         guard let target = renameTarget else { return }
         renameTarget = nil
         Task { await viewModel.rename(target, to: renameText) }
+    }
+
+    private var isSelecting: Bool { editMode == .active }
+
+    private func toggleSelecting() {
+        editMode = isSelecting ? .inactive : .active
+        selection.removeAll()
+    }
+
+    private func deleteSelected() {
+        let ids = selection
+        guard !ids.isEmpty else { return }
+        editMode = .inactive
+        selection.removeAll()
+        Task { await viewModel.delete(ids: ids) }
     }
 
     private func createAndOpen() {

@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct ChatView: View {
     private let environment: AppEnvironment
     @State private var viewModel: ChatViewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var thermalState = ProcessInfo.processInfo.thermalState
     @State private var editTarget: Message?
     @State private var editText = ""
@@ -15,6 +16,7 @@ struct ChatView: View {
     @State private var showAttachImporter = false
     @State private var showSessionInfo = false
     @State private var showVoiceMemoComposer = false
+    @State private var pendingModelID: String?
     /// Follows the live tail only while the user is at the bottom; scrolling
     /// up during generation stops the auto-scroll so earlier text is readable.
     @State private var isPinnedToBottom = true
@@ -79,6 +81,12 @@ struct ChatView: View {
                         Label("Session Info", systemImage: "chart.bar")
                     }
                     Button {
+                        viewModel.clearContext()
+                    } label: {
+                        Label("Clear Context", systemImage: "eraser")
+                    }
+                    .disabled(!viewModel.hasContextToClear)
+                    Button {
                         systemPromptText = viewModel.conversation.systemPrompt ?? ""
                         showSystemPrompt = true
                     } label: {
@@ -128,6 +136,27 @@ struct ChatView: View {
             )
         }
         .task { await viewModel.loadMessages() }
+        .confirmationDialog(
+            "Switch model?",
+            isPresented: Binding(
+                get: { pendingModelID != nil },
+                set: { if !$0 { pendingModelID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Switch") {
+                if let id = pendingModelID { viewModel.setActiveModel(id) }
+                pendingModelID = nil
+            }
+            Button("Cancel", role: .cancel) { pendingModelID = nil }
+        } message: {
+            Text("Your chat is kept. The new model reloads, which takes a few seconds, and if its context window is smaller some older messages may drop out of what it can see.")
+        }
+        .onAppear { environment.systemEvents.chatOpened() }
+        .onDisappear { environment.systemEvents.chatClosed() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { viewModel.prepareForBackgroundIfGenerating() }
+        }
         .onReceive(
             NotificationCenter.default
                 .publisher(for: ProcessInfo.thermalStateDidChangeNotification)
@@ -144,10 +173,32 @@ struct ChatView: View {
         )
     }
 
+    /// Marks where the model's view of the chat starts. Everything above is
+    /// still readable, just invisible to it.
+    private var contextClearedDivider: some View {
+        HStack(spacing: 8) {
+            Rectangle().fill(Color.pvHairline).frame(height: 1)
+            Text("Context cleared")
+                .font(PVFont.metaSmall)
+                .foregroundStyle(Color.pvTextSecondary)
+            Rectangle().fill(Color.pvHairline).frame(height: 1)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
     private var activeModelBinding: Binding<String?> {
         Binding(
             get: { viewModel.activeModelID },
-            set: { if let id = $0 { viewModel.setActiveModel(id) } }
+            set: { id in
+                guard let id, id != viewModel.activeModelID else { return }
+                // Nothing to warn about in an empty chat — just switch.
+                if viewModel.messages.isEmpty, viewModel.draft.isEmpty {
+                    viewModel.setActiveModel(id)
+                } else {
+                    pendingModelID = id
+                }
+            }
         )
     }
 
@@ -218,6 +269,9 @@ struct ChatView: View {
                             .padding(.top, 48)
                     }
                     ForEach(viewModel.messages) { message in
+                        if message.id == viewModel.firstMessageAfterClearID {
+                            contextClearedDivider
+                        }
                         if message.role == .attachment {
                             PVAttachmentCard(
                                 title: message.content,

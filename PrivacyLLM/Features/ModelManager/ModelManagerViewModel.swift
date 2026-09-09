@@ -8,6 +8,8 @@ final class ModelManagerViewModel {
     private(set) var activeThinkingID: String?
     var sortOrder: ModelSortOrder = .parameterSize
     private(set) var importError: String?
+    private(set) var isRefreshing = false
+    private(set) var refreshMessage: String?
 
     private let manager: any ModelManaging
     private var observationTask: Task<Void, Never>?
@@ -39,6 +41,24 @@ final class ModelManagerViewModel {
 
     func clearImportError() {
         importError = nil
+    }
+
+    /// Pulls the current model list off the Hub (FR-44). Only ever from a tap:
+    /// the app makes no network request on its own.
+    func refreshFromHub() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+        do {
+            let count = try await manager.refreshCatalogFromHub()
+            refreshMessage = String(localized: "\(count) models available.")
+        } catch {
+            refreshMessage = String(localized: "Couldn't reach Hugging Face. The list you have still works.")
+        }
+    }
+
+    func clearRefreshMessage() {
+        refreshMessage = nil
     }
 
     func start() {

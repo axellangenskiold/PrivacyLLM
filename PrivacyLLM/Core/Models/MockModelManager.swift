@@ -131,6 +131,11 @@ actor MockModelManager: ModelManaging {
         notify()
     }
 
+    @discardableResult
+    func refreshCatalogFromHub() async throws -> Int {
+        catalog.count
+    }
+
     nonisolated func exceedsDeviceRAM(_ spec: ModelSpec) -> Bool {
         let deviceRAMGB = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
         return Double(spec.minRAMGB) > deviceRAMGB

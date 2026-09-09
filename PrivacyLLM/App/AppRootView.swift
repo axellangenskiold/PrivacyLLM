@@ -6,20 +6,25 @@ import SwiftUI
 struct AppRootView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.scenePhase) private var scenePhase
-    @State private var systemEvents: SystemEventCoordinator?
+    @State private var startedSystemEvents = false
     @State private var needsOnboarding: Bool?
+    @State private var isLocked = false
 
     var body: some View {
         Group {
-            switch needsOnboarding {
-            case .none:
-                PVScreenBackground()
-            case .some(true):
-                OnboardingView(environment: environment) {
-                    completeOnboarding()
+            if isLocked {
+                lockScreen
+            } else {
+                switch needsOnboarding {
+                case .none:
+                    PVScreenBackground()
+                case .some(true):
+                    OnboardingView(environment: environment) {
+                        completeOnboarding()
+                    }
+                case .some(false):
+                    ConversationListView(environment: environment)
                 }
-            case .some(false):
-                ConversationListView(environment: environment)
             }
         }
         .tint(Color.pvAccent)
@@ -38,16 +43,47 @@ struct AppRootView: View {
                     for: .appearance,
                     default: AppearanceSetting.system
                 )) ?? .system
+                if (try? await environment.settingsStore.appLockEnabled()) == true {
+                    isLocked = true
+                    await unlock()
+                }
             }
-            if systemEvents == nil {
-                let coordinator = SystemEventCoordinator(inference: environment.inference)
-                coordinator.start()
-                systemEvents = coordinator
+            if !startedSystemEvents {
+                startedSystemEvents = true
+                environment.systemEvents.start()
                 MetricsCollector.shared.start()
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            systemEvents?.scenePhaseChanged(toBackground: phase == .background)
+            environment.systemEvents.scenePhaseChanged(toBackground: phase == .background)
+            // Re-lock on the way out, so the app switcher snapshot is the lock
+            // screen rather than someone's chats.
+            if phase == .background {
+                Task {
+                    if (try? await environment.settingsStore.appLockEnabled()) == true {
+                        isLocked = true
+                    }
+                }
+            }
+        }
+    }
+
+    private var lockScreen: some View {
+        VStack(spacing: PVSpacing.l) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 40, weight: .medium))
+                .foregroundStyle(Color.pvAccent)
+            Button("Unlock") { Task { await unlock() } }
+                .buttonStyle(.pvPrimary)
+                .padding(.horizontal, 64)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .pvScreen()
+    }
+
+    private func unlock() async {
+        if await AppLock.authenticate() {
+            isLocked = false
         }
     }
 

@@ -4,11 +4,12 @@ import Foundation
 /// Downloads a model's files with byte-range resume (NFR-12) and verifies
 /// every file's checksum before the model is marked usable (FR-13, PR-18).
 /// Pause = cancel the surrounding Task; partial files stay on disk and the
-/// next run resumes from the byte offset.
+/// next run resumes from the byte offset. Transfers run on a background
+/// URLSession, so leaving the app doesn't stop the download.
 nonisolated struct ModelDownloader: Sendable {
     var api: HuggingFaceAPI
     var store: ModelStore
-    var chunkSize = 256 * 1024
+    var transfers: any FileTransferring = BackgroundTransfers.shared
 
     func download(
         spec: ModelSpec,
@@ -71,45 +72,16 @@ nonisolated struct ModelDownloader: Sendable {
             request.setValue("bytes=\(existingSize)-", forHTTPHeaderField: "Range")
         }
 
-        let (bytes, response) = try await api.session.bytes(for: request)
-        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        switch http.statusCode {
-        case 206:
-            break
-        case 200:
-            // Server ignored the range; restart the file from scratch.
-            if existingSize > 0 {
-                try? FileManager.default.removeItem(at: destination)
-                existingSize = 0
-            }
-        default:
-            throw URLError(.badServerResponse)
-        }
-
-        if !FileManager.default.fileExists(atPath: destination.path) {
-            FileManager.default.createFile(atPath: destination.path, contents: nil)
-        }
-        let handle = try FileHandle(forWritingTo: destination)
-        defer { try? handle.close() }
-        try handle.seekToEnd()
-
-        var written = existingSize
-        var buffer = Data(capacity: chunkSize)
-        for try await byte in bytes {
-            buffer.append(byte)
-            if buffer.count >= chunkSize {
-                try Task.checkCancellation()
-                try handle.write(contentsOf: buffer)
-                written += Int64(buffer.count)
-                buffer.removeAll(keepingCapacity: true)
-                onFileBytes(written)
-            }
-        }
-        if !buffer.isEmpty {
-            try handle.write(contentsOf: buffer)
-            written += Int64(buffer.count)
-            onFileBytes(written)
-        }
+        // A background session keeps the transfer alive after the user leaves the
+        // app; the delegate appends the delivered bytes and handles a server that
+        // ignores the Range header. Everything after this — checksum, promote —
+        // is unchanged.
+        try await transfers.download(
+            request,
+            appendingTo: destination,
+            existingBytes: existingSize,
+            onProgress: onFileBytes
+        )
     }
 
     private func verify(_ file: HFFileEntry, at url: URL) throws -> Bool {

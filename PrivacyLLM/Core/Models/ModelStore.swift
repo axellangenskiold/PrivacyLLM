@@ -52,6 +52,32 @@ nonisolated struct ModelStore: Sendable {
         }
     }
 
+    // MARK: Discovered models
+
+    /// Specs pulled from the Hugging Face listing (FR-44). Cached so the models
+    /// screen still shows them offline, and kept apart from `imported.json` so a
+    /// refresh can replace the whole set without touching the user's imports.
+    private var discoveredManifestURL: URL {
+        baseDirectory.appending(path: "discovered.json")
+    }
+
+    func loadDiscoveredSpecs() -> [ModelSpec] {
+        guard let data = try? Data(contentsOf: discoveredManifestURL),
+              let specs = try? JSONDecoder().decode([ModelSpec].self, from: data)
+        else { return [] }
+        return specs
+    }
+
+    func saveDiscoveredSpecs(_ specs: [ModelSpec]) {
+        if specs.isEmpty {
+            try? FileManager.default.removeItem(at: discoveredManifestURL)
+            return
+        }
+        if let data = try? JSONEncoder().encode(specs) {
+            try? data.write(to: discoveredManifestURL)
+        }
+    }
+
     /// Copies a user-picked model folder into place and marks it ready to load.
     func importDirectory(from source: URL, as modelID: String) throws {
         let final = directory(for: modelID)

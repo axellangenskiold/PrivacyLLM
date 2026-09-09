@@ -1,3 +1,4 @@
+import EventKit
 import Foundation
 import Observation
 
@@ -15,6 +16,9 @@ final class AppEnvironment {
     let tts: any TTSServicing
     let voiceMemoDirectory: URL
     let egressMonitor: EgressMonitor
+    /// Owns the loaded model's lifecycle (memory pressure, backgrounding, idle
+    /// unload). Lives here so any screen can tell it the chat opened or closed.
+    let systemEvents: SystemEventCoordinator
     /// Mirrors the persisted appearance setting so theme changes apply live (FR-39).
     var appearance = AppearanceSetting.system
 
@@ -31,6 +35,7 @@ final class AppEnvironment {
         self.database = database
         self.inference = inference
         self.modelManager = modelManager
+        systemEvents = SystemEventCoordinator(inference: inference)
         let monitor = EgressMonitor(store: EgressEventStore(database: database))
         egressMonitor = monitor
         self.search = search ?? ConfiguredSearchService(
@@ -45,11 +50,27 @@ final class AppEnvironment {
 
     var voiceMemoStore: VoiceMemoStore { VoiceMemoStore(directory: voiceMemoDirectory) }
 
-    /// Tools available to the agent loop; the search tool reaches the network
-    /// only through the gated SearchServicing (TL-4).
+    /// One store for the whole app: EventKit caches its authorization state per
+    /// instance, so a fresh one per tool call would re-prompt.
+    private let eventStore = EKEventStore()
+
+    /// Tools available to the agent loop. The search tool reaches the network
+    /// only through the gated SearchServicing (TL-4); the device-action tools
+    /// are gated the same way by their own Settings switch (FR-42).
     var chatTools: [any LocalTool] {
-        [DateTimeTool(), CalculatorTool(), UnitConversionTool(), WebSearchTool(search: search)]
+        [
+            DateTimeTool(),
+            CalculatorTool(),
+            UnitConversionTool(),
+            WebSearchTool(search: search),
+            RememberTool(memory: UserMemory(settingsStore: settingsStore)),
+            CalendarEventTool(store: eventStore),
+            ReminderTool(store: eventStore),
+            PhoneTool(),
+        ]
     }
+
+    var userMemory: UserMemory { UserMemory(settingsStore: settingsStore) }
 
     var conversationStore: ConversationStore { ConversationStore(database: database) }
     var messageStore: MessageStore { MessageStore(database: database) }
